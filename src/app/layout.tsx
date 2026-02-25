@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClientErrorObserver } from "@/components/client-error-observer";
 import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${displayFont.variable} ${bodyFont.variable} min-h-screen antialiased`}>
         <Providers>
+          <ClientErrorObserver />
           <div className="flex min-h-screen flex-col">
             <Navbar />
             <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">{children}</main>

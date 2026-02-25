@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
+import { getFirstValidationError, registerSchema } from "@/lib/validation";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -20,10 +21,21 @@ export default function RegisterPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const parsed = registerSchema.safeParse({
+      fullName: form.fullName,
+      email: form.email.trim(),
+      password: form.password,
+      phone: form.phone.trim() || undefined,
+      address: form.address.trim() || undefined
+    });
+    if (!parsed.success) {
+      setError(getFirstValidationError(parsed.error));
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await register(form);
+      await register(parsed.data);
       router.push("/");
     } catch (err) {
       setError((err as Error).message);

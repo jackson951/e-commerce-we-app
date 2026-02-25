@@ -66,6 +66,7 @@ export function CheckoutPaymentClient() {
   }, [defaultMethod, selectedMethodId]);
 
   const isPaid = order?.status === "PAID";
+  const cvvValid = /^\d{3,4}$/.test(cvv.trim());
 
   return (
     <RequireAuth>
@@ -177,11 +178,15 @@ export function CheckoutPaymentClient() {
               </label>
 
               <button
-                disabled={processing || isPaid}
+                disabled={processing || isPaid || !selectedMethodId || !cvvValid}
                 className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                 onClick={async () => {
                   if (!token || !selectedMethodId) {
                     setError("Choose a payment method first.");
+                    return;
+                  }
+                  if (!cvvValid) {
+                    setError("Enter a valid CVV (3 or 4 digits).");
                     return;
                   }
                   setProcessing(true);
@@ -205,6 +210,7 @@ export function CheckoutPaymentClient() {
               >
                 {processing ? "Processing..." : isPaid ? "Order already paid" : `Pay ${formatCurrency(order.totalAmount)}`}
               </button>
+              {!isPaid && !cvvValid ? <p className="text-xs text-amber-700">Enter a valid CVV to enable payment.</p> : null}
 
               <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
                 <p className="font-medium text-slate-800">Payment flow notes</p>

@@ -4,8 +4,37 @@ import { RequireAdmin } from "@/components/route-guards";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
 import { Category, Product } from "@/lib/types";
+import { adminProductSchema, getFirstValidationError } from "@/lib/validation";
 import { formatCurrency, getProductImage } from "@/lib/utils";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+
+type ProductFormState = {
+  name: string;
+  description: string;
+  price: string;
+  stockQuantity: string;
+  categoryId: string;
+  imageUrls: string;
+  active: boolean;
+};
+
+const ITEMS_PER_PAGE = 8;
+
+function validateProductForm(form: ProductFormState) {
+  return adminProductSchema.safeParse({
+    name: form.name,
+    description: form.description,
+    price: Number(form.price),
+    stockQuantity: Number(form.stockQuantity),
+    categoryId: form.categoryId,
+    imageUrls: form.imageUrls
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean),
+    active: form.active
+  });
+}
 
 export default function AdminProductsPage() {
   const { token } = useAuth();
@@ -16,6 +45,11 @@ export default function AdminProductsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [stockFilter, setStockFilter] = useState<"all" | "in-stock" | "out-of-stock">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc" | "stock-desc">("newest");
+  const [page, setPage] = useState(1);
 
   const [form, setForm] = useState({
     name: "",
@@ -56,18 +90,12 @@ export default function AdminProductsPage() {
       return;
     }
 
-    const payload = {
-      name: form.name,
-      description: form.description,
-      price: Number(form.price),
-      stockQuantity: Number(form.stockQuantity),
-      categoryId: form.categoryId,
-      imageUrls: form.imageUrls
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean),
-      active: form.active
-    };
+    const parsed = validateProductForm(form);
+    if (!parsed.success) {
+      setMessage(getFirstValidationError(parsed.error));
+      return;
+    }
+    const payload = parsed.data;
 
     try {
       setSubmitting(true);
@@ -98,18 +126,12 @@ export default function AdminProductsPage() {
       return;
     }
 
-    const payload = {
-      name: editForm.name,
-      description: editForm.description,
-      price: Number(editForm.price),
-      stockQuantity: Number(editForm.stockQuantity),
-      categoryId: editForm.categoryId,
-      imageUrls: editForm.imageUrls
-        .split(",")
-        .map((v) => v.trim())
-        .filter(Boolean),
-      active: editForm.active
-    };
+    const parsed = validateProductForm(editForm);
+    if (!parsed.success) {
+      setMessage(getFirstValidationError(parsed.error));
+      return;
+    }
+    const payload = parsed.data;
 
     try {
       setUpdating(true);
@@ -141,6 +163,30 @@ export default function AdminProductsPage() {
       setDeletingId(null);
     }
   }
+
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    let result = products.filter((p) => {
+      const inStock = p.stockQuantity > 0;
+      const matchesStock = stockFilter === "all" || (stockFilter === "in-stock" ? inStock : !inStock);
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? p.active : !p.active);
+      const matchesQuery =
+        !normalizedQuery ||
+        p.name.toLowerCase().includes(normalizedQuery) ||
+        (p.description || "").toLowerCase().includes(normalizedQuery) ||
+        p.category.name.toLowerCase().includes(normalizedQuery);
+      return matchesStock && matchesStatus && matchesQuery;
+    });
+
+    if (sortBy === "price-asc") result = [...result].sort((a, b) => a.price - b.price);
+    if (sortBy === "price-desc") result = [...result].sort((a, b) => b.price - a.price);
+    if (sortBy === "stock-desc") result = [...result].sort((a, b) => b.stockQuantity - a.stockQuantity);
+    return result;
+  }, [products, query, stockFilter, statusFilter, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const pagedProducts = filteredProducts.slice((safePage - 1) * ITEMS_PER_PAGE, safePage * ITEMS_PER_PAGE);
 
   return (
     <RequireAdmin>
@@ -296,10 +342,61 @@ export default function AdminProductsPage() {
         <div className="rounded-3xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur">
           <h2 className="text-xl font-semibold text-slate-900">Catalog</h2>
           <p className="mt-1 text-sm text-slate-600">Tap edit to update details without leaving this dashboard.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Search product/category"
+            />
+            <select
+              value={stockFilter}
+              onChange={(e) => {
+                setStockFilter(e.target.value as "all" | "in-stock" | "out-of-stock");
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="all">All stock</option>
+              <option value="in-stock">In stock</option>
+              <option value="out-of-stock">Out of stock</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value as "all" | "active" | "inactive");
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "price-asc" | "price-desc" | "stock-desc")}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="newest">Sort: Newest</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="stock-desc">Stock: High to Low</option>
+            </select>
+          </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {products.map((p) => (
+            {pagedProducts.map((p) => (
               <article key={p.id} className="rounded-2xl border border-slate-200 p-3">
-                <img src={getProductImage(p.imageUrls)} alt={p.name} className="h-32 w-full rounded-xl object-cover" />
+                <Image
+                  src={getProductImage(p.imageUrls)}
+                  alt={p.name}
+                  width={640}
+                  height={320}
+                  className="h-32 w-full rounded-xl object-cover"
+                />
                 <p className="mt-3 line-clamp-1 font-medium text-slate-900">{p.name}</p>
                 <p className="text-xs text-slate-500">{p.category.name}</p>
                 <p className="mt-1 text-sm font-semibold text-brand-700">{formatCurrency(p.price)}</p>
@@ -332,6 +429,33 @@ export default function AdminProductsPage() {
                 </div>
               </article>
             ))}
+          </div>
+          {!pagedProducts.length ? <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">No products found.</p> : null}
+          <div className="mt-3 flex items-center justify-between text-sm text-slate-600">
+            <p>
+              Showing {pagedProducts.length} of {filteredProducts.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={safePage <= 1}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <span>
+                Page {safePage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={safePage >= totalPages}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </section>

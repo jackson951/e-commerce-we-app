@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
+import { getFirstValidationError, loginSchema } from "@/lib/validation";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -14,10 +15,18 @@ export default function LoginPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const parsed = loginSchema.safeParse({
+      email: email.trim(),
+      password
+    });
+    if (!parsed.success) {
+      setError(getFirstValidationError(parsed.error));
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      await login(email, password);
+      await login(parsed.data.email, parsed.data.password);
       router.push("/");
     } catch (err) {
       setError((err as Error).message);

@@ -20,6 +20,10 @@ export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"newest" | "amount-desc" | "amount-asc">("newest");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!token) return;
@@ -37,6 +41,32 @@ export default function AdminOrdersPage() {
     () => orders.filter((order) => String(order.status).toUpperCase().includes("PENDING")).length,
     [orders]
   );
+  const filteredOrders = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    let result = orders.filter((order) => {
+      const matchesStatus = statusFilter === "all" || String(order.status).toUpperCase() === statusFilter;
+      const customerLabel = getCustomerLabel(order).toLowerCase();
+      const customerEmail = getCustomerEmail(order).toLowerCase();
+      const matchesQuery =
+        !normalizedQuery ||
+        order.orderNumber.toLowerCase().includes(normalizedQuery) ||
+        customerLabel.includes(normalizedQuery) ||
+        customerEmail.includes(normalizedQuery);
+      return matchesStatus && matchesQuery;
+    });
+
+    if (sortBy === "amount-desc") result = [...result].sort((a, b) => b.totalAmount - a.totalAmount);
+    if (sortBy === "amount-asc") result = [...result].sort((a, b) => a.totalAmount - b.totalAmount);
+    return result;
+  }, [orders, query, statusFilter, sortBy]);
+  const perPage = 10;
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / perPage));
+  const safePage = Math.min(page, totalPages);
+  const pagedOrders = filteredOrders.slice((safePage - 1) * perPage, safePage * perPage);
+  const statuses = useMemo(() => {
+    const all = Array.from(new Set(orders.map((order) => String(order.status).toUpperCase())));
+    return ["all", ...all];
+  }, [orders]);
 
   return (
     <RequireAdmin>
@@ -61,9 +91,45 @@ export default function AdminOrdersPage() {
         {loading ? <p className="rounded-xl bg-white p-4 text-sm text-slate-600">Loading orders...</p> : null}
         {error ? <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
         {!loading && !error && !orders.length ? <p className="rounded-xl bg-white p-4 text-sm">No orders found.</p> : null}
+        {!loading && !error ? (
+          <div className="grid gap-2 sm:grid-cols-3">
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              placeholder="Search order/customer/email"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            >
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status === "all" ? "All statuses" : status}
+                </option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "amount-desc" | "amount-asc")}
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            >
+              <option value="newest">Sort: Newest</option>
+              <option value="amount-desc">Amount: High to Low</option>
+              <option value="amount-asc">Amount: Low to High</option>
+            </select>
+          </div>
+        ) : null}
 
         <div className="space-y-3">
-          {orders.map((order) => (
+          {pagedOrders.map((order) => (
             <article key={order.id} className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -92,7 +158,38 @@ export default function AdminOrdersPage() {
               </div>
             </article>
           ))}
+          {!loading && !error && !pagedOrders.length ? (
+            <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">No orders match your filters.</p>
+          ) : null}
         </div>
+        {!loading && !error ? (
+          <div className="flex items-center justify-between text-sm text-slate-600">
+            <p>
+              Showing {pagedOrders.length} of {filteredOrders.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={safePage <= 1}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <span>
+                Page {safePage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={safePage >= totalPages}
+                className="rounded-lg border border-slate-300 px-2.5 py-1.5 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
     </RequireAdmin>
   );

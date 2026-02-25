@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
 import { Product } from "@/lib/types";
 import { formatCurrency, getProductImage, toSafeQuantity } from "@/lib/utils";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -44,10 +45,16 @@ export default function ProductDetailPage() {
   return (
     <section className="grid gap-8 lg:grid-cols-2">
       <div className="space-y-3">
-        <img src={getProductImage(product.imageUrls)} alt={product.name} className="h-96 w-full rounded-2xl object-cover" />
+        <Image
+          src={getProductImage(product.imageUrls)}
+          alt={product.name}
+          width={1200}
+          height={768}
+          className="h-96 w-full rounded-2xl object-cover"
+        />
         <div className="grid grid-cols-3 gap-2">
           {(product.imageUrls?.length ? product.imageUrls : [getProductImage(product.imageUrls)]).map((img, i) => (
-            <img key={i} src={img} alt={`${product.name}-${i}`} className="h-24 w-full rounded-lg object-cover" />
+            <Image key={i} src={img} alt={`${product.name}-${i}`} width={320} height={160} className="h-24 w-full rounded-lg object-cover" />
           ))}
         </div>
       </div>

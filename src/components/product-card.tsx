@@ -4,6 +4,7 @@ import { useCart } from "@/contexts/cart-context";
 import { useAuth } from "@/contexts/auth-context";
 import { Product } from "@/lib/types";
 import { formatCurrency, getProductImage } from "@/lib/utils";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -37,12 +38,12 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(22,76,193,0.18)]">
       <Link href={`/products/${product.id}`} className="block">
-        <img
+        <Image
           src={getProductImage(product.imageUrls)}
           alt={product.name}
+          width={640}
+          height={480}
           className="h-48 w-full object-cover"
-          loading="lazy"
-          decoding="async"
         />
       </Link>
       <div className="space-y-2 p-4">

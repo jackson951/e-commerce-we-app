@@ -1,5 +1,6 @@
 "use client";
 
+import { getFirstValidationError, paymentMethodSchema } from "@/lib/validation";
 import { useState } from "react";
 
 type PaymentMethodFormProps = {
@@ -35,16 +36,21 @@ export function PaymentMethodForm({ defaultBillingAddress, submitting, buttonLab
       onSubmit={async (event) => {
         event.preventDefault();
         setError(null);
+        const parsed = paymentMethodSchema.safeParse({
+          cardHolderName: cardHolderName.trim(),
+          cardNumber: cardNumber.replace(/\s+/g, ""),
+          brand: brand.trim() || undefined,
+          expiryMonth,
+          expiryYear,
+          billingAddress: billingAddress.trim() || undefined,
+          defaultMethod
+        });
+        if (!parsed.success) {
+          setError(getFirstValidationError(parsed.error));
+          return;
+        }
         try {
-          await onSubmit({
-            cardHolderName,
-            cardNumber,
-            brand: brand.trim() || undefined,
-            expiryMonth,
-            expiryYear,
-            billingAddress: billingAddress.trim() || undefined,
-            defaultMethod
-          });
+          await onSubmit(parsed.data);
           setCardNumber("");
         } catch (submitError) {
           setError((submitError as Error).message);
@@ -67,7 +73,11 @@ export function PaymentMethodForm({ defaultBillingAddress, submitting, buttonLab
           <input
             required
             value={cardNumber}
-            onChange={(e) => setCardNumber(e.target.value)}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/[^\d]/g, "").slice(0, 19);
+              const grouped = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+              setCardNumber(grouped);
+            }}
             className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-brand-500 focus:ring"
             placeholder="4111 1111 1111 1111"
           />
