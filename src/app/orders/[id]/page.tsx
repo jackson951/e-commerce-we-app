@@ -13,14 +13,14 @@ import { useEffect, useState } from "react";
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
   const { token, isAdmin, effectiveCustomerId } = useAuth();
-  const orderId = Number(params.id);
+  const orderId = params.id;
   const [order, setOrder] = useState<Order | null>(null);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!token || !Number.isFinite(orderId)) {
+    if (!token || !orderId) {
       setLoading(false);
       return;
     }

@@ -17,7 +17,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingMethod, setSavingMethod] = useState(false);
-  const [workingMethodId, setWorkingMethodId] = useState<number | null>(null);
+  const [workingMethodId, setWorkingMethodId] = useState<string | null>(null);
   const [isAddingMethod, setIsAddingMethod] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

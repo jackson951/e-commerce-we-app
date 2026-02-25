@@ -12,10 +12,10 @@ export default function AdminProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [message, setMessage] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -61,7 +61,7 @@ export default function AdminProductsPage() {
       description: form.description,
       price: Number(form.price),
       stockQuantity: Number(form.stockQuantity),
-      categoryId: Number(form.categoryId),
+      categoryId: form.categoryId,
       imageUrls: form.imageUrls
         .split(",")
         .map((v) => v.trim())
@@ -103,7 +103,7 @@ export default function AdminProductsPage() {
       description: editForm.description,
       price: Number(editForm.price),
       stockQuantity: Number(editForm.stockQuantity),
-      categoryId: Number(editForm.categoryId),
+      categoryId: editForm.categoryId,
       imageUrls: editForm.imageUrls
         .split(",")
         .map((v) => v.trim())

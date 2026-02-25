@@ -13,7 +13,7 @@ export default function CartPage() {
   const { cart, loading, mutating, updateItem, removeItem, checkout } = useCart();
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
-  const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
   return (
     <RequireAuth>

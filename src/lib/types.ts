@@ -1,11 +1,11 @@
 export type Category = {
-  id: number;
+  id: string;
   name: string;
   description?: string;
 };
 
 export type Product = {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   price: number;
@@ -16,8 +16,8 @@ export type Product = {
 };
 
 export type CartItem = {
-  id: number;
-  productId: number;
+  id: string;
+  productId: string;
   productName: string;
   quantity: number;
   unitPrice: number;
@@ -25,14 +25,14 @@ export type CartItem = {
 };
 
 export type Cart = {
-  id: number;
-  customerId: number;
+  id: string;
+  customerId: string;
   items: CartItem[];
   totalAmount: number;
 };
 
 export type CustomerProfile = {
-  id: number;
+  id: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -40,8 +40,8 @@ export type CustomerProfile = {
 };
 
 export type OrderItem = {
-  id: number;
-  productId: number;
+  id: string;
+  productId: string;
   productName: string;
   quantity: number;
   unitPrice: number;
@@ -49,28 +49,28 @@ export type OrderItem = {
 };
 
 export type Order = {
-  id: number;
+  id: string;
   orderNumber: string;
   status: string;
   totalAmount: number;
   createdAt: string;
-  customerId: number;
+  customerId: string;
   items: OrderItem[];
   customerName?: string;
   customerEmail?: string;
   customer?: {
-    id: number;
+    id: string;
     fullName?: string;
     email?: string;
   };
 };
 
 export type AuthUser = {
-  id: number;
+  id: string;
   email: string;
   fullName: string;
   roles: string[];
-  customerId: number | null;
+  customerId: string | null;
 };
 
 export type AuthResponse = {
@@ -85,7 +85,7 @@ export type PaymentProvider = "CARD";
 export type PaymentStatus = "APPROVED" | "DECLINED";
 
 export type PaymentMethod = {
-  id: number;
+  id: string;
   provider: PaymentProvider;
   cardHolderName: string;
   brand: string;
@@ -99,10 +99,10 @@ export type PaymentMethod = {
 };
 
 export type PaymentTransaction = {
-  id: number;
-  orderId: number;
-  customerId: number;
-  paymentMethodId: number;
+  id: string;
+  orderId: string;
+  customerId: string;
+  paymentMethodId: string;
   status: PaymentStatus;
   amount: number;
   currency: string;
@@ -112,7 +112,7 @@ export type PaymentTransaction = {
 };
 
 export type AdminUser = {
-  id: number;
+  id: string;
   email: string;
   fullName: string;
   roles: string[];

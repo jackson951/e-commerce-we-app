@@ -22,9 +22,9 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [pendingUserId, setPendingUserId] = useState<number | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [savingEditId, setSavingEditId] = useState<number | null>(null);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [savingEditId, setSavingEditId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     email: "",

@@ -96,10 +96,10 @@ function HomeContent() {
   }, [query, selectedCategory, minPrice, maxPrice, stockFilter, sortBy, router, searchParams]);
 
   const categoryCounts = useMemo(() => {
-    const counts = new Map<number, number>();
+    const counts = new Map<string, number>();
     for (const product of products) {
       const id = product.category?.id;
-      if (typeof id !== "number") continue;
+      if (!id) continue;
       counts.set(id, (counts.get(id) || 0) + 1);
     }
     return counts;

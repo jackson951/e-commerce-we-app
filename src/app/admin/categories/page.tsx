@@ -11,12 +11,12 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [savingId, setSavingId] = useState<number | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function load() {
@@ -48,7 +48,7 @@ export default function AdminCategoriesPage() {
     }
   }
 
-  async function onSaveEdit(categoryId: number) {
+  async function onSaveEdit(categoryId: string) {
     if (!token) return;
     if (!editName.trim()) {
       setMessage("Category name is required.");

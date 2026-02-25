@@ -115,11 +115,11 @@ export const api = {
   register: (payload: { fullName: string; email: string; password: string; phone?: string; address?: string }) =>
     request<AuthResponse>("/auth/register", "POST", undefined, payload),
   me: (token: string) => request<AuthResponse["user"]>("/auth/me", "GET", token),
-  getCustomer: (token: string, customerId: number) =>
+  getCustomer: (token: string, customerId: string) =>
     request<CustomerProfile>(`/customers/${customerId}`, "GET", token),
   updateCustomer: async (
     token: string,
-    customerId: number,
+    customerId: string,
     payload: { fullName: string; email: string; phone?: string; address?: string }
   ) => {
     const customer = await request<CustomerProfile>(`/customers/${customerId}`, "PUT", token, payload);
@@ -128,18 +128,18 @@ export const api = {
   },
 
   listProducts: () => request<Product[]>("/products", "GET"),
-  getProduct: (id: number) => request<Product>(`/products/${id}`, "GET"),
+  getProduct: (id: string) => request<Product>(`/products/${id}`, "GET"),
   createProduct: async (token: string, payload: unknown) => {
     const created = await request<Product>("/products", "POST", token, payload);
     invalidateGetCache(["/products"]);
     return created;
   },
-  updateProduct: async (token: string, productId: number, payload: unknown) => {
+  updateProduct: async (token: string, productId: string, payload: unknown) => {
     const updated = await request<Product>(`/products/${productId}`, "PUT", token, payload);
     invalidateGetCache(["/products"]);
     return updated;
   },
-  deleteProduct: async (token: string, productId: number) => {
+  deleteProduct: async (token: string, productId: string) => {
     await request<void>(`/products/${productId}`, "DELETE", token);
     invalidateGetCache(["/products"]);
   },
@@ -152,59 +152,59 @@ export const api = {
   },
   updateCategory: async (
     token: string,
-    categoryId: number,
+    categoryId: string,
     payload: { name: string; description?: string }
   ) => {
     const updated = await request<Category>(`/categories/${categoryId}`, "PUT", token, payload);
     invalidateGetCache(["/categories", "/products"]);
     return updated;
   },
-  deleteCategory: async (token: string, categoryId: number) => {
+  deleteCategory: async (token: string, categoryId: string) => {
     await request<void>(`/categories/${categoryId}`, "DELETE", token);
     invalidateGetCache(["/categories", "/products"]);
   },
   adminListOrders: (token: string) => request<Order[]>("/admin/orders", "GET", token),
   adminListUsers: (token: string) => request<AdminUser[]>("/admin/users", "GET", token),
-  adminSetUserAccess: async (token: string, userId: number, enabled: boolean) => {
+  adminSetUserAccess: async (token: string, userId: string, enabled: boolean) => {
     const updated = await request<AdminUser>(`/admin/users/${userId}/access?enabled=${enabled}`, "PATCH", token);
     invalidateGetCache(["/admin/users"]);
     return updated;
   },
-  adminUpdateUser: async (token: string, userId: number, payload: AdminUserUpdatePayload) => {
+  adminUpdateUser: async (token: string, userId: string, payload: AdminUserUpdatePayload) => {
     const updated = await request<AdminUser>(`/admin/users/${userId}`, "PUT", token, payload);
     invalidateGetCache(["/admin/users"]);
     return updated;
   },
 
-  getCart: (token: string, customerId: number) => request<Cart>(`/customers/${customerId}/cart`, "GET", token),
-  addToCart: async (token: string, customerId: number, productId: number, quantity: number) => {
+  getCart: (token: string, customerId: string) => request<Cart>(`/customers/${customerId}/cart`, "GET", token),
+  addToCart: async (token: string, customerId: string, productId: string, quantity: number) => {
     const cart = await request<Cart>(`/customers/${customerId}/cart/items`, "POST", token, { productId, quantity });
     invalidateGetCache([`/customers/${customerId}/cart`]);
     return cart;
   },
-  updateCartItem: async (token: string, customerId: number, itemId: number, quantity: number) => {
+  updateCartItem: async (token: string, customerId: string, itemId: string, quantity: number) => {
     const cart = await request<Cart>(`/customers/${customerId}/cart/items/${itemId}`, "PATCH", token, { quantity });
     invalidateGetCache([`/customers/${customerId}/cart`]);
     return cart;
   },
-  removeCartItem: async (token: string, customerId: number, itemId: number) => {
+  removeCartItem: async (token: string, customerId: string, itemId: string) => {
     const cart = await request<Cart>(`/customers/${customerId}/cart/items/${itemId}`, "DELETE", token);
     invalidateGetCache([`/customers/${customerId}/cart`]);
     return cart;
   },
-  checkout: async (token: string, customerId: number) => {
+  checkout: async (token: string, customerId: string) => {
     const order = await request<Order>(`/customers/${customerId}/orders/checkout`, "POST", token);
     invalidateGetCache([`/customers/${customerId}/cart`, `/customers/${customerId}/orders`, "/admin/orders"]);
     return order;
   },
-  listOrders: (token: string, customerId: number) => request<Order[]>(`/customers/${customerId}/orders`, "GET", token),
-  getOrder: (token: string, orderId: number) => request<Order>(`/orders/${orderId}`, "GET", token),
+  listOrders: (token: string, customerId: string) => request<Order[]>(`/customers/${customerId}/orders`, "GET", token),
+  getOrder: (token: string, orderId: string) => request<Order>(`/orders/${orderId}`, "GET", token),
 
-  listPaymentMethods: (token: string, customerId: number) =>
+  listPaymentMethods: (token: string, customerId: string) =>
     request<PaymentMethod[]>(`/customers/${customerId}/payment-methods`, "GET", token),
   createPaymentMethod: async (
     token: string,
-    customerId: number,
+    customerId: string,
     payload: {
       provider?: "CARD";
       cardHolderName: string;
@@ -220,7 +220,7 @@ export const api = {
     invalidateGetCache([`/customers/${customerId}/payment-methods`]);
     return method;
   },
-  setDefaultPaymentMethod: async (token: string, customerId: number, paymentMethodId: number) => {
+  setDefaultPaymentMethod: async (token: string, customerId: string, paymentMethodId: string) => {
     const method = await request<PaymentMethod>(
       `/customers/${customerId}/payment-methods/${paymentMethodId}/default`,
       "PATCH",
@@ -229,7 +229,7 @@ export const api = {
     invalidateGetCache([`/customers/${customerId}/payment-methods`]);
     return method;
   },
-  setPaymentMethodEnabled: async (token: string, customerId: number, paymentMethodId: number, enabled: boolean) => {
+  setPaymentMethodEnabled: async (token: string, customerId: string, paymentMethodId: string, enabled: boolean) => {
     const method = await request<PaymentMethod>(
       `/customers/${customerId}/payment-methods/${paymentMethodId}/access?enabled=${enabled}`,
       "PATCH",
@@ -238,7 +238,7 @@ export const api = {
     invalidateGetCache([`/customers/${customerId}/payment-methods`]);
     return method;
   },
-  processOrderPayment: async (token: string, orderId: number, paymentMethodId: number, cvv: string) => {
+  processOrderPayment: async (token: string, orderId: string, paymentMethodId: string, cvv: string) => {
     const payment = await request<PaymentTransaction>(`/orders/${orderId}/payments`, "POST", token, {
       paymentMethodId,
       cvv
@@ -246,8 +246,8 @@ export const api = {
     invalidateGetCache([`/orders/${orderId}/payments`, `/orders/${orderId}`, "/admin/orders"]);
     return payment;
   },
-  listOrderPayments: (token: string, orderId: number) =>
+  listOrderPayments: (token: string, orderId: string) =>
     request<PaymentTransaction[]>(`/orders/${orderId}/payments`, "GET", token),
-  listCustomerPayments: (token: string, customerId: number) =>
+  listCustomerPayments: (token: string, customerId: string) =>
     request<PaymentTransaction[]>(`/customers/${customerId}/payments`, "GET", token)
 };

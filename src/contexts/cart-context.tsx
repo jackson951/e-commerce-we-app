@@ -10,10 +10,10 @@ type CartContextValue = {
   loading: boolean;
   mutating: boolean;
   refreshCart: () => Promise<void>;
-  addItem: (productId: number, quantity: number) => Promise<void>;
-  updateItem: (itemId: number, quantity: number) => Promise<void>;
-  removeItem: (itemId: number) => Promise<void>;
-  checkout: () => Promise<number>;
+  addItem: (productId: string, quantity: number) => Promise<void>;
+  updateItem: (itemId: string, quantity: number) => Promise<void>;
+  removeItem: (itemId: string) => Promise<void>;
+  checkout: () => Promise<string>;
 };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -41,7 +41,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     refreshCart().catch(() => undefined);
   }, [refreshCart]);
 
-  const addItem = async (productId: number, quantity: number) => {
+  const addItem = async (productId: string, quantity: number) => {
     if (!token || !effectiveCustomerId) throw new Error("Switch to customer view to use cart.");
     setMutating(true);
     try {
@@ -51,7 +51,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateItem = async (itemId: number, quantity: number) => {
+  const updateItem = async (itemId: string, quantity: number) => {
     if (!token || !effectiveCustomerId) throw new Error("Switch to customer view to use cart.");
     setMutating(true);
     try {
@@ -61,7 +61,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const removeItem = async (itemId: number) => {
+  const removeItem = async (itemId: string) => {
     if (!token || !effectiveCustomerId) throw new Error("Switch to customer view to use cart.");
     setMutating(true);
     try {

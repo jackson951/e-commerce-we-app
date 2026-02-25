@@ -21,7 +21,7 @@ type AuthContextValue = {
   viewMode: ViewMode;
   hasAdminRole: boolean;
   isAdmin: boolean;
-  effectiveCustomerId: number | null;
+  effectiveCustomerId: string | null;
   canUseCustomerFeatures: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
@@ -64,8 +64,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewModeState] = useState<ViewMode>("CUSTOMER");
-  const [fallbackCustomerId, setFallbackCustomerId] = useState<number | null>(null);
-  const [fallbackProbeDoneForUserId, setFallbackProbeDoneForUserId] = useState<number | null>(null);
+  const [fallbackCustomerId, setFallbackCustomerId] = useState<string | null>(null);
+  const [fallbackProbeDoneForUserId, setFallbackProbeDoneForUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = readStoredAuth();

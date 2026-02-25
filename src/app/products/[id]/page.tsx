@@ -18,8 +18,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const id = Number(params.id);
-    if (!Number.isFinite(id)) {
+    const id = params.id;
+    if (!id) {
       setMessage("Invalid product id.");
       setLoading(false);
       return;

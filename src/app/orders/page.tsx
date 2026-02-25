@@ -32,7 +32,7 @@ export default function OrdersPage() {
 
     const loadOrders = async () => {
       try {
-        const data = isAdmin ? await api.adminListOrders(token) : await api.listOrders(token, effectiveCustomerId as number);
+        const data = isAdmin ? await api.adminListOrders(token) : await api.listOrders(token, effectiveCustomerId as string);
         setOrders(data);
       } catch (err) {
         setError((err as Error).message);

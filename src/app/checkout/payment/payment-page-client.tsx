@@ -14,12 +14,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 export function CheckoutPaymentClient() {
   const searchParams = useSearchParams();
   const { token, effectiveCustomerId, canUseCustomerFeatures, hasAdminRole, viewMode } = useAuth();
-  const orderId = Number(searchParams.get("orderId") || "");
+  const orderId = searchParams.get("orderId") || "";
 
   const [order, setOrder] = useState<Order | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
-  const [selectedMethodId, setSelectedMethodId] = useState<number | null>(null);
+  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [cvv, setCvv] = useState("");
   const [loading, setLoading] = useState(true);
   const [savingMethod, setSavingMethod] = useState(false);
@@ -33,7 +33,7 @@ export function CheckoutPaymentClient() {
   );
 
   const loadData = useCallback(async () => {
-    if (!token || !effectiveCustomerId || !Number.isFinite(orderId)) {
+    if (!token || !effectiveCustomerId || !orderId) {
       setLoading(false);
       return;
     }
@@ -84,7 +84,7 @@ export function CheckoutPaymentClient() {
               : "Only customer accounts can process checkout payments."}
           </p>
         ) : null}
-        {!Number.isFinite(orderId) ? (
+        {!orderId ? (
           <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">Missing order ID. Open checkout from the cart page.</p>
         ) : null}
 
