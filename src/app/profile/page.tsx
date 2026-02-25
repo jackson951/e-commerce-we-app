@@ -10,8 +10,7 @@ import { CreditCard, UserRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 export default function ProfilePage() {
-  const { user, token, refreshUser, isAdmin } = useAuth();
-  const customerId = user?.customerId;
+  const { token, refreshUser, effectiveCustomerId, canUseCustomerFeatures, hasAdminRole, viewMode } = useAuth();
 
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
@@ -29,7 +28,7 @@ export default function ProfilePage() {
   const [address, setAddress] = useState("");
 
   const loadData = useCallback(async () => {
-    if (!token || !customerId) {
+    if (!token || !effectiveCustomerId) {
       setLoading(false);
       return;
     }
@@ -37,8 +36,8 @@ export default function ProfilePage() {
     setError(null);
     try {
       const [customer, paymentMethods] = await Promise.all([
-        api.getCustomer(token, customerId),
-        api.listPaymentMethods(token, customerId)
+        api.getCustomer(token, effectiveCustomerId),
+        api.listPaymentMethods(token, effectiveCustomerId)
       ]);
       setProfile(customer);
       setMethods(paymentMethods);
@@ -51,7 +50,7 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [token, customerId]);
+  }, [token, effectiveCustomerId]);
 
   useEffect(() => {
     loadData().catch(() => undefined);
@@ -68,9 +67,11 @@ export default function ProfilePage() {
           <p className="mt-1 text-sm text-slate-600">Update your profile details and manage your saved payment methods.</p>
         </div>
 
-        {!customerId ? (
+        {!canUseCustomerFeatures ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
-            This account has no customer profile. Payment methods are available for customer accounts only.
+            {hasAdminRole && viewMode === "ADMIN"
+              ? "Switch to Customer View from the header to manage customer profile and payment methods."
+              : "This account has no customer profile. Payment methods are available for customer accounts only."}
           </div>
         ) : null}
 
@@ -78,7 +79,7 @@ export default function ProfilePage() {
         {error ? <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
         {message ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{message}</p> : null}
 
-        {customerId && profile ? (
+        {effectiveCustomerId && profile ? (
           <div className="grid gap-6 lg:grid-cols-2">
             <article className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-xl font-semibold">Personal details</h2>
@@ -91,7 +92,7 @@ export default function ProfilePage() {
                   setMessage(null);
                   setError(null);
                   try {
-                    const updated = await api.updateCustomer(token, customerId, {
+                    const updated = await api.updateCustomer(token, effectiveCustomerId, {
                       fullName,
                       email,
                       phone: phone.trim() || undefined,
@@ -184,8 +185,8 @@ export default function ProfilePage() {
                               setError(null);
                               setMessage(null);
                               try {
-                                await api.setDefaultPaymentMethod(token, customerId, method.id);
-                                setMethods(await api.listPaymentMethods(token, customerId));
+                                await api.setDefaultPaymentMethod(token, effectiveCustomerId, method.id);
+                                setMethods(await api.listPaymentMethods(token, effectiveCustomerId));
                                 setMessage("Default payment method updated.");
                               } catch (actionError) {
                                 setError((actionError as Error).message);
@@ -206,8 +207,8 @@ export default function ProfilePage() {
                             setError(null);
                             setMessage(null);
                             try {
-                              await api.setPaymentMethodEnabled(token, customerId, method.id, !method.enabled);
-                              setMethods(await api.listPaymentMethods(token, customerId));
+                              await api.setPaymentMethodEnabled(token, effectiveCustomerId, method.id, !method.enabled);
+                              setMethods(await api.listPaymentMethods(token, effectiveCustomerId));
                               setMessage(method.enabled ? "Payment method disabled." : "Payment method enabled.");
                             } catch (actionError) {
                               setError((actionError as Error).message);
@@ -247,8 +248,8 @@ export default function ProfilePage() {
                       setMessage(null);
                       setError(null);
                       try {
-                        await api.createPaymentMethod(token, customerId, payload);
-                        setMethods(await api.listPaymentMethods(token, customerId));
+                        await api.createPaymentMethod(token, effectiveCustomerId, payload);
+                        setMethods(await api.listPaymentMethods(token, effectiveCustomerId));
                         setMessage("Payment method saved.");
                         setIsAddingMethod(false);
                       } finally {
@@ -266,7 +267,7 @@ export default function ProfilePage() {
           <p className="font-medium text-slate-800">Account access</p>
           <p className="mt-2">
             Self-disable is not yet exposed by backend API. Admins can disable user access from the admin users screen.
-            {isAdmin ? " You can do this from Admin > Users." : ""}
+            {hasAdminRole ? " You can do this from Admin > Users." : ""}
           </p>
         </div>
       </section>

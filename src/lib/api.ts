@@ -1,5 +1,6 @@
 import {
   AdminUser,
+  AdminUserUpdatePayload,
   AuthResponse,
   Cart,
   Category,
@@ -133,6 +134,11 @@ export const api = {
     invalidateGetCache(["/products"]);
     return created;
   },
+  updateProduct: async (token: string, productId: number, payload: unknown) => {
+    const updated = await request<Product>(`/products/${productId}`, "PUT", token, payload);
+    invalidateGetCache(["/products"]);
+    return updated;
+  },
   deleteProduct: async (token: string, productId: number) => {
     await request<void>(`/products/${productId}`, "DELETE", token);
     invalidateGetCache(["/products"]);
@@ -144,6 +150,15 @@ export const api = {
     invalidateGetCache(["/categories", "/products"]);
     return created;
   },
+  updateCategory: async (
+    token: string,
+    categoryId: number,
+    payload: { name: string; description?: string }
+  ) => {
+    const updated = await request<Category>(`/categories/${categoryId}`, "PUT", token, payload);
+    invalidateGetCache(["/categories", "/products"]);
+    return updated;
+  },
   deleteCategory: async (token: string, categoryId: number) => {
     await request<void>(`/categories/${categoryId}`, "DELETE", token);
     invalidateGetCache(["/categories", "/products"]);
@@ -152,6 +167,11 @@ export const api = {
   adminListUsers: (token: string) => request<AdminUser[]>("/admin/users", "GET", token),
   adminSetUserAccess: async (token: string, userId: number, enabled: boolean) => {
     const updated = await request<AdminUser>(`/admin/users/${userId}/access?enabled=${enabled}`, "PATCH", token);
+    invalidateGetCache(["/admin/users"]);
+    return updated;
+  },
+  adminUpdateUser: async (token: string, userId: number, payload: AdminUserUpdatePayload) => {
+    const updated = await request<AdminUser>(`/admin/users/${userId}`, "PUT", token, payload);
     invalidateGetCache(["/admin/users"]);
     return updated;
   },

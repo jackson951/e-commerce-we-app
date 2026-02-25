@@ -2,7 +2,18 @@ import type { Metadata } from "next";
 import { Footer } from "@/components/footer";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/navbar";
+import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+
+const displayFont = Space_Grotesk({
+  variable: "--font-display",
+  subsets: ["latin"]
+});
+
+const bodyFont = Manrope({
+  variable: "--font-body",
+  subsets: ["latin"]
+});
 
 export const metadata: Metadata = {
   title: "StreetLuxCity E-Commerce",
@@ -12,7 +23,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">
+      <body className={`${displayFont.variable} ${bodyFont.variable} min-h-screen antialiased`}>
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Navbar />

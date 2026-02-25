@@ -9,7 +9,7 @@ import { useState } from "react";
 
 export function ProductCard({ product }: { product: Product }) {
   const { addItem, mutating } = useCart();
-  const { user } = useAuth();
+  const { canUseCustomerFeatures, hasAdminRole, viewMode } = useAuth();
   const [message, setMessage] = useState<string | null>(null);
   const inStock = product.active && product.stockQuantity > 0;
 
@@ -18,8 +18,12 @@ export function ProductCard({ product }: { product: Product }) {
       setMessage("This product is currently out of stock.");
       return;
     }
-    if (!user?.customerId) {
-      setMessage("Login as customer to add items.");
+    if (!canUseCustomerFeatures) {
+      setMessage(
+        hasAdminRole && viewMode === "ADMIN"
+          ? "Switch to Customer View to add items."
+          : "Login as customer to add items."
+      );
       return;
     }
     try {

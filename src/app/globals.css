@@ -9,15 +9,31 @@
 }
 
 :root {
-  --bg: #f5f8ff;
+  --bg: #edf4ff;
   --fg: #0f172a;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-border: rgba(148, 163, 184, 0.25);
 }
 
 body {
   min-height: 100vh;
+  font-family: var(--font-body), "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at 10% -10%, rgba(35, 118, 255, 0.2), transparent 45%),
-    radial-gradient(circle at 90% -5%, rgba(18, 88, 220, 0.14), transparent 36%),
+    radial-gradient(circle at 8% -14%, rgba(21, 92, 219, 0.24), transparent 42%),
+    radial-gradient(circle at 100% -10%, rgba(35, 118, 255, 0.16), transparent 38%),
+    radial-gradient(circle at 50% 120%, rgba(14, 116, 144, 0.09), transparent 46%),
     var(--bg);
   color: var(--fg);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(35, 118, 255, 0.2);
+  color: #0b2a64;
 }

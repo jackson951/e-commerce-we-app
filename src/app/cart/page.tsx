@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function CartPage() {
-  const { user } = useAuth();
+  const { canUseCustomerFeatures, hasAdminRole, viewMode } = useAuth();
   const { cart, loading, mutating, updateItem, removeItem, checkout } = useCart();
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
@@ -19,10 +19,14 @@ export default function CartPage() {
     <RequireAuth>
       <section className="space-y-4">
         <h1 className="text-3xl font-semibold">Your Cart</h1>
-        {!user?.customerId ? (
-          <p className="rounded-xl bg-white p-4 text-sm">Only customer accounts can use the cart and checkout flow.</p>
+        {!canUseCustomerFeatures ? (
+          <p className="rounded-xl bg-white p-4 text-sm">
+            {hasAdminRole && viewMode === "ADMIN"
+              ? "Switch to Customer View from the header to use cart and checkout."
+              : "Only customer accounts can use the cart and checkout flow."}
+          </p>
         ) : null}
-        {user?.customerId ? (
+        {canUseCustomerFeatures ? (
           <>
         {loading && <p>Loading cart...</p>}
         {!cart?.items.length && !loading && <p className="rounded-xl bg-white p-4">Your cart is empty.</p>}

@@ -11,8 +11,13 @@ export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [savingId, setSavingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   async function load() {
     setCategories(await api.listCategories());
@@ -30,6 +35,7 @@ export default function AdminCategoriesPage() {
       return;
     }
     try {
+      setSubmitting(true);
       await api.createCategory(token, { name, description });
       setName("");
       setDescription("");
@@ -37,6 +43,34 @@ export default function AdminCategoriesPage() {
       await load();
     } catch (err) {
       setMessage((err as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onSaveEdit(categoryId: number) {
+    if (!token) return;
+    if (!editName.trim()) {
+      setMessage("Category name is required.");
+      return;
+    }
+
+    setMessage(null);
+    setSavingId(categoryId);
+    try {
+      await api.updateCategory(token, categoryId, {
+        name: editName.trim(),
+        description: editDescription.trim()
+      });
+      setEditingId(null);
+      setEditName("");
+      setEditDescription("");
+      setMessage("Category updated.");
+      await load();
+    } catch (err) {
+      setMessage((err as Error).message);
+    } finally {
+      setSavingId(null);
     }
   }
 
@@ -60,33 +94,98 @@ export default function AdminCategoriesPage() {
 
   return (
     <RequireAdmin>
-      <section className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <form onSubmit={onSubmit} className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h1 className="text-2xl font-semibold">Create Category</h1>
+      <section className="grid gap-6 lg:grid-cols-[minmax(260px,0.9fr)_1fr]">
+        <form onSubmit={onSubmit} className="rounded-3xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur">
+          <h1 className="text-2xl font-semibold text-slate-900">Category Studio</h1>
+          <p className="mt-1 text-sm text-slate-600">Create and maintain category labels used across your catalog.</p>
           <div className="mt-4 grid gap-3">
-            <input className="rounded-xl border border-slate-300 px-4 py-2" placeholder="Category name" required value={name} onChange={(e) => setName(e.target.value)} />
-            <textarea className="rounded-xl border border-slate-300 px-4 py-2" placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
-            <button className="rounded-xl bg-brand-600 px-4 py-2 text-white hover:bg-brand-700">Save category</button>
+            <input
+              className="rounded-xl border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring"
+              placeholder="Category name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <textarea
+              className="min-h-24 rounded-xl border border-slate-300 px-4 py-2.5 outline-none ring-brand-500 focus:ring"
+              placeholder="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+            <button
+              disabled={submitting}
+              className="rounded-xl bg-brand-600 px-4 py-2.5 font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {submitting ? "Saving..." : "Save category"}
+            </button>
             {message && <p className="text-sm text-slate-600">{message}</p>}
           </div>
         </form>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="text-xl font-semibold">Existing Categories</h2>
-          <ul className="mt-4 space-y-2">
+        <div className="rounded-3xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur">
+          <h2 className="text-xl font-semibold text-slate-900">Existing Categories</h2>
+          <ul className="mt-4 space-y-3">
             {categories.map((c) => (
-              <li key={c.id} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 p-3">
-                <div>
-                  <p className="font-medium">{c.name}</p>
-                  <p className="text-sm text-slate-600">{c.description}</p>
-                </div>
-                <button
-                  onClick={() => onDelete(c)}
-                  disabled={deletingId === c.id}
-                  className="rounded-md border border-red-200 bg-white px-3 py-1 text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {deletingId === c.id ? "Deleting..." : "Delete"}
-                </button>
+              <li key={c.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                {editingId === c.id ? (
+                  <div className="grid gap-3">
+                    <input
+                      className="rounded-xl border border-slate-300 px-3 py-2 outline-none ring-brand-500 focus:ring"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                    <textarea
+                      className="min-h-20 rounded-xl border border-slate-300 px-3 py-2 outline-none ring-brand-500 focus:ring"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => onSaveEdit(c.id)}
+                        disabled={savingId === c.id}
+                        className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        {savingId === c.id ? "Updating..." : "Update"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingId(null);
+                          setEditName("");
+                          setEditDescription("");
+                        }}
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-slate-900">{c.name}</p>
+                      <p className="mt-1 text-sm text-slate-600">{c.description || "No description"}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingId(c.id);
+                          setEditName(c.name);
+                          setEditDescription(c.description || "");
+                        }}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDelete(c)}
+                        disabled={deletingId === c.id}
+                        className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {deletingId === c.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

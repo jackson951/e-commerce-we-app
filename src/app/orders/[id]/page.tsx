@@ -5,14 +5,14 @@ import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
 import { Order, PaymentTransaction } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { CheckCircle2, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function OrderDetailPage() {
   const params = useParams<{ id: string }>();
-  const { user, token, isAdmin } = useAuth();
-  const customerId = user?.customerId;
+  const { token, isAdmin, effectiveCustomerId } = useAuth();
   const orderId = Number(params.id);
   const [order, setOrder] = useState<Order | null>(null);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
@@ -25,7 +25,7 @@ export default function OrderDetailPage() {
       return;
     }
 
-    if (!isAdmin && !customerId) {
+    if (!isAdmin && !effectiveCustomerId) {
       setOrder(null);
       setLoading(false);
       return;
@@ -47,34 +47,43 @@ export default function OrderDetailPage() {
     };
 
     loadOrder();
-  }, [token, customerId, isAdmin, orderId]);
+  }, [token, effectiveCustomerId, isAdmin, orderId]);
 
   return (
     <RequireAuth>
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-3xl font-semibold">Order Details</h1>
-          <Link href="/orders" className="text-sm font-medium text-brand-700 hover:text-brand-800">
+          <h1 className="text-3xl font-semibold text-slate-900">Order Details</h1>
+          <Link href="/orders" className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50">
             Back to orders
           </Link>
         </div>
-        {loading ? <p className="rounded-xl bg-white p-4 text-sm text-slate-600">Loading order...</p> : null}
+        {loading ? (
+          <p className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 text-sm text-slate-600">Loading order...</p>
+        ) : null}
         {error ? <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
-        {!loading && !error && !order ? <p className="rounded-xl bg-white p-4 text-sm">Order not found.</p> : null}
+        {!loading && !error && !order ? <p className="rounded-2xl border border-slate-200 bg-white p-4 text-sm">Order not found.</p> : null}
 
         {order ? (
-          <article className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <article className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-sm text-slate-500">Order Number</p>
-                <p className="text-lg font-semibold">{order.orderNumber}</p>
+                <p className="text-lg font-semibold text-slate-900">{order.orderNumber}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm uppercase text-slate-500">{order.status}</p>
+                <p
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    order.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {order.status === "PAID" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+                  {order.status}
+                </p>
                 <p className="text-sm text-slate-500">{formatDate(order.createdAt)}</p>
               </div>
             </div>
-            <div className="rounded-xl bg-slate-50 p-4">
+            <div className="rounded-2xl bg-slate-50 p-4">
               <p className="text-sm text-slate-600">Total</p>
               <p className="text-2xl font-bold text-brand-700">{formatCurrency(order.totalAmount)}</p>
             </div>

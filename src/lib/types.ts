@@ -116,10 +116,22 @@ export type AdminUser = {
   email: string;
   fullName: string;
   roles: string[];
+  phone?: string;
+  address?: string;
   enabled?: boolean;
   accountNonLocked?: boolean;
   accountNonExpired?: boolean;
   credentialsNonExpired?: boolean;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type AdminUserUpdatePayload = {
+  email: string;
+  fullName: string;
+  password?: string;
+  roles: string[];
+  enabled: boolean;
+  phone?: string;
+  address?: string;
 };

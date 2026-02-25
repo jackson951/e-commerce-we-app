@@ -5,12 +5,12 @@ import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
 import { Order } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { CheckCircle2, Clock3 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function OrdersPage() {
-  const { user, token, isAdmin } = useAuth();
-  const customerId = user?.customerId;
+  const { token, isAdmin, effectiveCustomerId } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export default function OrdersPage() {
       return;
     }
 
-    if (!isAdmin && !customerId) {
+    if (!isAdmin && !effectiveCustomerId) {
       setOrders([]);
       setLoading(false);
       return;
@@ -32,7 +32,7 @@ export default function OrdersPage() {
 
     const loadOrders = async () => {
       try {
-        const data = isAdmin ? await api.adminListOrders(token) : await api.listOrders(token, customerId as number);
+        const data = isAdmin ? await api.adminListOrders(token) : await api.listOrders(token, effectiveCustomerId as number);
         setOrders(data);
       } catch (err) {
         setError((err as Error).message);
@@ -42,21 +42,35 @@ export default function OrdersPage() {
     };
 
     loadOrders();
-  }, [token, customerId, isAdmin]);
+  }, [token, effectiveCustomerId, isAdmin]);
 
   return (
     <RequireAuth>
-      <section className="space-y-4">
-        <h1 className="text-3xl font-semibold">{isAdmin ? "All Orders" : "My Orders"}</h1>
-        {loading ? <p className="rounded-xl bg-white p-4 text-sm text-slate-600">Loading orders...</p> : null}
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {!loading && !error && !orders.length ? <p className="rounded-xl bg-white p-4">No orders found.</p> : null}
-        <div className="space-y-3">
+      <section className="space-y-5">
+        <div className="rounded-3xl border border-slate-200/80 bg-white/85 p-6 shadow-sm backdrop-blur">
+          <h1 className="text-3xl font-semibold text-slate-900">{isAdmin ? "Order Intelligence" : "My Orders"}</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            {isAdmin ? "Track all storefront purchases and payment status in one feed." : "Monitor your purchases and complete pending payments quickly."}
+          </p>
+        </div>
+        {loading ? (
+          <p className="rounded-2xl border border-slate-200/70 bg-white/85 p-4 text-sm text-slate-600">Loading orders...</p>
+        ) : null}
+        {error ? <p className="rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
+        {!loading && !error && !orders.length ? <p className="rounded-2xl border border-slate-200/70 bg-white/85 p-4">No orders found.</p> : null}
+        <div className="grid gap-3">
           {orders.map((order) => (
-            <article key={order.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <article key={order.id} className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="font-semibold">{order.orderNumber}</p>
-                <p className="text-sm uppercase text-slate-500">{order.status}</p>
+                <p className="font-semibold text-slate-900">{order.orderNumber}</p>
+                <p
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    order.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {order.status === "PAID" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+                  {order.status}
+                </p>
               </div>
               <p className="mt-1 text-sm text-slate-500">{formatDate(order.createdAt)}</p>
               <p className="mt-2 font-semibold text-brand-700">{formatCurrency(order.totalAmount)}</p>
@@ -69,11 +83,17 @@ export default function OrdersPage() {
               </ul>
               {(order.items?.length || 0) > 3 ? <p className="mt-2 text-xs text-slate-500">+{(order.items?.length || 0) - 3} more items</p> : null}
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Link href={`/orders/${order.id}`} className="inline-flex text-sm font-medium text-brand-700 hover:text-brand-800">
+                <Link
+                  href={`/orders/${order.id}`}
+                  className="inline-flex rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
                   View order details
                 </Link>
                 {!isAdmin && order.status !== "PAID" ? (
-                  <Link href={`/checkout/payment?orderId=${order.id}`} className="inline-flex text-sm font-medium text-brand-700 hover:text-brand-800">
+                  <Link
+                    href={`/checkout/payment?orderId=${order.id}`}
+                    className="inline-flex rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+                  >
                     Complete payment
                   </Link>
                 ) : null}
