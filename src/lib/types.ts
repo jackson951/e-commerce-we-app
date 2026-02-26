@@ -155,9 +155,10 @@ export type CheckoutSessionItem = {
 
 export type CheckoutSession = {
   id: string;
+  checkoutSessionId: string;
   customerId?: string;
   status: CheckoutSessionStatus;
-  totalAmount: number;
+ amount: number;
   currency?: string;
   createdAt?: string;
   expiresAt?: string;

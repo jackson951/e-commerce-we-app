@@ -243,6 +243,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setMutating(true);
     try {
       const session = await api.createCheckoutSession(token);
+      console.log("Created checkout session:", session);
+      if (!session?.id || session.id === "undefined") {
+        throw new Error("Failed to start checkout session. Please try again.");
+      }
       setOptimisticQuantityDelta(0);
       return { sessionId: session.id };
     } finally {

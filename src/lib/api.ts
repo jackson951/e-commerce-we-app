@@ -219,20 +219,54 @@ export const api = {
     return session;
   },
   createCheckoutSession: async (token: string) => {
-    return request<CheckoutSession>("/checkout/sessions", "POST", token, {});
+    const data = await request<CheckoutSession & { sessionId?: string; checkoutSessionId?: string }>(
+      "/checkout/sessions",
+      "POST",
+      token,
+      {}
+    );
+    const resolvedId = data.id || data.sessionId || data.checkoutSessionId;
+    if (!resolvedId) {
+      throw new Error("Checkout session response is missing session ID.");
+    }
+    return {
+      ...data,
+      id: resolvedId
+    } as CheckoutSession;
   },
   getCheckoutSession: (token: string, sessionId: string) => request<CheckoutSession>(`/checkout/sessions/${sessionId}`, "GET", token),
-  payCheckoutSession: async (token: string, sessionId: string, paymentMethodId: string, cvv: string) => {
-    return request<CheckoutSessionPayResponse>(`/checkout/sessions/${sessionId}/pay`, "POST", token, {
+ payCheckoutSession: async (
+  token: string,
+  sessionId: string,
+  paymentMethodId: string,
+  cvv: string,
+  idempotencyKey: string
+) => {
+  return request<CheckoutSessionPayResponse>(
+    `/checkout/sessions/${sessionId}/pay`,
+    "POST",
+    token,
+    {
       paymentMethodId,
-      cvv
-    });
-  },
-  finalizeCheckoutSession: async (token: string, sessionId: string) => {
-    const finalized = await request<FinalizeCheckoutSessionResponse>(`/checkout/sessions/${sessionId}/finalize`, "POST", token, {});
-    invalidateGetCache(["/admin/orders", `/orders/${finalized.orderId}`, `/orders/${finalized.orderId}/tracking`]);
-    return finalized;
-  },
+      cvv,
+      idempotencyKey // ← ADD THIS LINE
+    }
+  );
+},
+ finalizeCheckoutSession: async (token: string, sessionId: string, idempotencyKey: string) => {
+  const finalized = await request<FinalizeCheckoutSessionResponse>(
+    `/checkout/sessions/${sessionId}/finalize`,
+    "POST",
+    token,
+    { idempotencyKey } // <- send the key
+  );
+  invalidateGetCache([
+    "/admin/orders",
+    `/orders/${finalized.orderId}`,
+    `/orders/${finalized.orderId}/tracking`,
+  ]);
+  return finalized;
+},
   listOrders: (token: string, customerId: string) => request<Order[]>(`/customers/${customerId}/orders`, "GET", token),
   getOrder: (token: string, orderId: string) => request<Order>(`/orders/${orderId}`, "GET", token),
   getOrderTracking: (token: string, orderId: string) => request<OrderTracking>(`/orders/${orderId}/tracking`, "GET", token),

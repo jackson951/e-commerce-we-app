@@ -33,8 +33,15 @@ function getSessionStatusLabel(status?: string) {
 export function CheckoutPaymentClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { token, effectiveCustomerId, canUseCustomerFeatures, hasAdminRole, viewMode } = useAuth();
+  const {
+    token,
+    effectiveCustomerId,
+    canUseCustomerFeatures,
+    hasAdminRole,
+    viewMode,
+  } = useAuth();
   const sessionId = searchParams.get("sessionId") || "";
+  const hasValidSessionId = /^[0-9a-fA-F-]{36}$/.test(sessionId);
 
   const [session, setSession] = useState<CheckoutSession | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -45,14 +52,17 @@ export function CheckoutPaymentClient() {
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const defaultMethod = useMemo(
-    () => paymentMethods.find((method) => method.defaultMethod && method.enabled) || paymentMethods.find((method) => method.enabled),
-    [paymentMethods]
+    () =>
+      paymentMethods.find((method) => method.defaultMethod && method.enabled) ||
+      paymentMethods.find((method) => method.enabled),
+    [paymentMethods],
   );
 
   const loadData = useCallback(async () => {
-    if (!token || !effectiveCustomerId || !sessionId) {
+    if (!token || !effectiveCustomerId || !sessionId || !hasValidSessionId) {
       setLoading(false);
       return;
     }
@@ -61,8 +71,9 @@ export function CheckoutPaymentClient() {
     try {
       const [sessionData, methodsData] = await Promise.all([
         api.getCheckoutSession(token, sessionId),
-        api.listPaymentMethods(token, effectiveCustomerId)
+        api.listPaymentMethods(token, effectiveCustomerId),
       ]);
+      console.log("Loaded checkout session:", sessionData);
       setSession(sessionData);
       setPaymentMethods(methodsData);
     } catch (loadError) {
@@ -70,7 +81,7 @@ export function CheckoutPaymentClient() {
     } finally {
       setLoading(false);
     }
-  }, [token, effectiveCustomerId, sessionId]);
+  }, [token, effectiveCustomerId, sessionId, hasValidSessionId]);
 
   useEffect(() => {
     loadData().catch(() => undefined);
@@ -82,16 +93,22 @@ export function CheckoutPaymentClient() {
     }
   }, [defaultMethod, selectedMethodId]);
 
-  const canPaySession = session?.status === "INITIATED" || session?.status === "PAYMENT_PENDING" || session?.status === "FAILED";
+  const canPaySession =
+    session?.status === "INITIATED" ||
+    session?.status === "PAYMENT_PENDING" ||
+    session?.status === "FAILED";
   const cvvValid = /^\d{3,4}$/.test(cvv.trim());
 
   return (
     <RequireAuth>
       <section className="space-y-6">
         <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur">
-          <h1 className="text-3xl font-semibold text-slate-900">Checkout Payment</h1>
+          <h1 className="text-3xl font-semibold text-slate-900">
+            Checkout Payment
+          </h1>
           <p className="mt-1 text-sm text-slate-600">
-            Flow: cart checkout creates an order, then payment authorizes it. Declines are safe to retry with another method.
+            Flow: cart checkout creates an order, then payment authorizes it.
+            Declines are safe to retry with another method.
           </p>
         </div>
 
@@ -102,48 +119,87 @@ export function CheckoutPaymentClient() {
               : "Only customer accounts can process checkout payments."}
           </p>
         ) : null}
-        {!sessionId ? (
-          <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">Missing checkout session ID. Start checkout from the cart page.</p>
+        {!sessionId || !hasValidSessionId ? (
+          <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            Invalid checkout session. Start checkout again from the cart page.
+          </p>
         ) : null}
 
         {loading ? (
-          <p className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 text-sm text-slate-600">Loading payment details...</p>
+          <p className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 text-sm text-slate-600">
+            Loading payment details...
+          </p>
         ) : null}
-        {error ? <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
-        {message ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{message}</p> : null}
+        {error ? (
+          <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
+            {message}
+          </p>
+        ) : null}
 
         {session ? (
           <div className="grid gap-6 lg:grid-cols-2">
             <article className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm">
-              <h2 className="text-xl font-semibold text-slate-900">Checkout summary</h2>
+              <h2 className="text-xl font-semibold text-slate-900">
+                Checkout summary
+              </h2>
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">Session #{session.id.slice(0, 8)}</p>
-                <p className="text-2xl font-bold text-brand-700">{formatCurrency(session.totalAmount)}</p>
-                {session.createdAt ? <p className="text-xs text-slate-500">{formatDate(session.createdAt)}</p> : null}
+                <p className="text-sm text-slate-500">
+                  Session #{session?.checkoutSessionId?.slice(0, 8) ?? "N/A"}
+                </p>
+                <p className="text-2xl font-bold text-brand-700">
+                  {formatCurrency(session.amount)}
+                </p>
+                {session.createdAt ? (
+                  <p className="text-xs text-slate-500">
+                    {formatDate(session.createdAt)}
+                  </p>
+                ) : null}
                 <p
                   className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    session.status === "CONSUMED" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    session.status === "CONSUMED"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {session.status === "CONSUMED" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                  {session.status === "CONSUMED" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                  )}
                   {getSessionStatusLabel(session.status)}
                 </p>
               </div>
               <ul className="space-y-2 text-sm">
                 {session.items.map((item) => (
-                  <li key={item.productId} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+                  <li
+                    key={item.productId}
+                    className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2"
+                  >
                     <span>
                       {item.productName} x {item.quantity}
                     </span>
-                    <span className="font-medium">{formatCurrency(item.subtotal)}</span>
+                    <span className="font-medium">
+                      {formatCurrency(item.subtotal)}
+                    </span>
                   </li>
                 ))}
               </ul>
               <div className="flex flex-wrap gap-2">
-                <Link href="/orders" className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
+                <Link
+                  href="/orders"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+                >
                   Back to orders
                 </Link>
-                <Link href="/cart" className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
+                <Link
+                  href="/cart"
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+                >
                   Back to cart
                 </Link>
               </div>
@@ -156,20 +212,28 @@ export function CheckoutPaymentClient() {
               </h2>
 
               <div className="space-y-2">
-                {paymentMethods.length ? null : <p className="text-sm text-slate-600">No payment methods yet. Add one below.</p>}
+                {paymentMethods.length ? null : (
+                  <p className="text-sm text-slate-600">
+                    No payment methods yet. Add one below.
+                  </p>
+                )}
                 {paymentMethods.map((method) => (
                   <label
                     key={method.id}
                     className={`flex items-center justify-between rounded-xl border px-3 py-2 ${
-                      method.enabled ? "border-slate-200" : "border-amber-300 bg-amber-50"
+                      method.enabled
+                        ? "border-slate-200"
+                        : "border-amber-300 bg-amber-50"
                     }`}
                   >
                     <div>
                       <p className="text-sm font-medium">
-                        {method.brand} **** {method.last4} {method.defaultMethod ? "(Default)" : ""}
+                        {method.brand} **** {method.last4}{" "}
+                        {method.defaultMethod ? "(Default)" : ""}
                       </p>
                       <p className="text-xs text-slate-500">
-                        exp {String(method.expiryMonth).padStart(2, "0")}/{method.expiryYear}
+                        exp {String(method.expiryMonth).padStart(2, "0")}/
+                        {method.expiryYear}
                       </p>
                     </div>
                     <input
@@ -195,7 +259,9 @@ export function CheckoutPaymentClient() {
               </label>
 
               <button
-                disabled={processing || !canPaySession || !selectedMethodId || !cvvValid}
+                disabled={
+                  processing || !canPaySession || !selectedMethodId || !cvvValid
+                }
                 className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                 onClick={async () => {
                   if (!token || !selectedMethodId) {
@@ -210,15 +276,32 @@ export function CheckoutPaymentClient() {
                   setError(null);
                   setMessage(null);
                   try {
-                    const result = await api.payCheckoutSession(token, session.id, selectedMethodId, cvv);
+                    const result = await api.payCheckoutSession(
+                      token,
+                      session.checkoutSessionId,
+                      selectedMethodId,
+                      cvv,
+                      idempotencyKey,
+                    );
                     if (result.status === "APPROVED") {
-                      const finalized = await api.finalizeCheckoutSession(token, session.id);
-                      setMessage("Payment approved. Order created. Redirecting...");
+                      const finalized = await api.finalizeCheckoutSession(
+                        token,
+                        session.checkoutSessionId,
+                         idempotencyKey // <- pass the same UUID
+                      );
+                      setMessage(
+                        "Payment approved. Order created. Redirecting...",
+                      );
                       router.push(`/orders/${finalized.orderId}`);
                     } else {
                       setError(result.gatewayMessage || "Payment declined.");
                     }
-                    setSession(await api.getCheckoutSession(token, session.id));
+                    setSession(
+                      await api.getCheckoutSession(
+                        token,
+                        session.checkoutSessionId,
+                      ),
+                    );
                   } catch (processError) {
                     setError((processError as Error).message);
                   } finally {
@@ -226,19 +309,36 @@ export function CheckoutPaymentClient() {
                   }
                 }}
               >
-                {processing ? "Processing..." : !canPaySession ? "Payment unavailable for this session" : `Pay ${formatCurrency(session.totalAmount)}`}
+                {processing
+                  ? "Processing..."
+                  : !canPaySession
+                    ? "Payment unavailable for this session"
+                    : `Pay ${formatCurrency(session.amount)}`}
               </button>
-              {canPaySession && !cvvValid ? <p className="text-xs text-amber-700">Enter a valid CVV to enable payment.</p> : null}
-              {!canPaySession ? <p className="text-xs text-slate-600">This checkout session can no longer be paid.</p> : null}
+              {canPaySession && !cvvValid ? (
+                <p className="text-xs text-amber-700">
+                  Enter a valid CVV to enable payment.
+                </p>
+              ) : null}
+              {!canPaySession ? (
+                <p className="text-xs text-slate-600">
+                  This checkout session can no longer be paid.
+                </p>
+              ) : null}
 
               <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
                 <p className="font-medium text-slate-800">Payment flow notes</p>
-                <p className="mt-1">Payment approval finalizes this checkout session and creates the order atomically.</p>
+                <p className="mt-1">
+                  Payment approval finalizes this checkout session and creates
+                  the order atomically.
+                </p>
               </div>
 
               {canPaySession ? (
                 <details className="rounded-xl border border-slate-200 p-3">
-                  <summary className="cursor-pointer text-sm font-medium">Add a new card</summary>
+                  <summary className="cursor-pointer text-sm font-medium">
+                    Add a new card
+                  </summary>
                   <div className="mt-3">
                     <PaymentMethodForm
                       submitting={savingMethod}
@@ -249,8 +349,15 @@ export function CheckoutPaymentClient() {
                         setError(null);
                         setMessage(null);
                         try {
-                          const method = await api.createPaymentMethod(token, effectiveCustomerId, payload);
-                          const updatedMethods = await api.listPaymentMethods(token, effectiveCustomerId);
+                          const method = await api.createPaymentMethod(
+                            token,
+                            effectiveCustomerId,
+                            payload,
+                          );
+                          const updatedMethods = await api.listPaymentMethods(
+                            token,
+                            effectiveCustomerId,
+                          );
                           setPaymentMethods(updatedMethods);
                           setSelectedMethodId(method.id);
                           setMessage("Payment method added. You can pay now.");
