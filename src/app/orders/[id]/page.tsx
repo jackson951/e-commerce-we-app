@@ -3,7 +3,8 @@
 import { RequireAuth } from "@/components/route-guards";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
-import { Order, PaymentTransaction } from "@/lib/types";
+import { getOrderStatusLabel } from "@/lib/order-tracking";
+import { Order, OrderTracking, PaymentTransaction } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CheckCircle2, Clock3 } from "lucide-react";
 import Link from "next/link";
@@ -15,6 +16,7 @@ export default function OrderDetailPage() {
   const { token, isAdmin, effectiveCustomerId } = useAuth();
   const orderId = params.id;
   const [order, setOrder] = useState<Order | null>(null);
+  const [tracking, setTracking] = useState<OrderTracking | null>(null);
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +38,13 @@ export default function OrderDetailPage() {
 
     const loadOrder = async () => {
       try {
-        const [orderData, paymentData] = await Promise.all([api.getOrder(token, orderId), api.listOrderPayments(token, orderId)]);
+        const [orderData, trackingData, paymentData] = await Promise.all([
+          api.getOrder(token, orderId),
+          api.getOrderTracking(token, orderId),
+          api.listOrderPayments(token, orderId)
+        ]);
         setOrder(orderData);
+        setTracking(trackingData);
         setPayments(paymentData);
       } catch (err) {
         setError((err as Error).message);
@@ -48,6 +55,7 @@ export default function OrderDetailPage() {
 
     loadOrder();
   }, [token, effectiveCustomerId, isAdmin, orderId]);
+  const hasApprovedPayment = payments.some((payment) => payment.status === "APPROVED");
 
   return (
     <RequireAuth>
@@ -74,11 +82,11 @@ export default function OrderDetailPage() {
               <div className="text-right">
                 <p
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    order.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    order.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {order.status === "PAID" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
-                  {order.status}
+                  {order.status === "DELIVERED" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+                  {getOrderStatusLabel(order.status)}
                 </p>
                 <p className="text-sm text-slate-500">{formatDate(order.createdAt)}</p>
               </div>
@@ -88,17 +96,44 @@ export default function OrderDetailPage() {
               <p className="text-2xl font-bold text-brand-700">{formatCurrency(order.totalAmount)}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {order.status === "PAID" ? (
+              {hasApprovedPayment ? (
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Payment Approved</span>
-              ) : (
+              ) : order.status === "ORDER_RECEIVED" ? (
                 <Link
                   href={`/checkout/payment?orderId=${order.id}`}
                   className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
                 >
                   Complete payment
                 </Link>
+              ) : (
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">Tracking in progress</span>
               )}
             </div>
+            {tracking ? (
+              <div className="space-y-2 rounded-2xl border border-slate-200 p-4">
+                <p className="text-sm font-semibold text-slate-900">Tracking progress</p>
+                <div className="grid gap-2">
+                  {tracking.stages.map((stage) => (
+                    <div key={stage.status} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                      <p className={`${stage.current ? "font-semibold text-brand-700" : "text-slate-700"}`}>
+                        Step {stage.step}: {stage.label}
+                      </p>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          stage.current
+                            ? "bg-brand-100 text-brand-700"
+                            : stage.completed
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {stage.current ? "Current" : stage.completed ? "Done" : "Pending"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <ul className="space-y-3">
               {(order.items || []).map((item) => (
                 <li key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3">

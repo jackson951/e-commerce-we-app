@@ -48,10 +48,19 @@ export type OrderItem = {
   subtotal: number;
 };
 
+export type OrderStatus =
+  | "ORDER_RECEIVED"
+  | "PROCESSING_PACKING"
+  | "SHIPPED"
+  | "IN_TRANSIT"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED";
+
 export type Order = {
   id: string;
   orderNumber: string;
-  status: string;
+  status: OrderStatus;
   totalAmount: number;
   createdAt: string;
   customerId: string;
@@ -63,6 +72,22 @@ export type Order = {
     fullName?: string;
     email?: string;
   };
+};
+
+export type OrderTrackingStage = {
+  step: number;
+  status: OrderStatus;
+  label: string;
+  completed: boolean;
+  current: boolean;
+};
+
+export type OrderTracking = {
+  orderId: string;
+  orderNumber: string;
+  currentStatus: OrderStatus;
+  createdAt: string;
+  stages: OrderTrackingStage[];
 };
 
 export type AuthUser = {

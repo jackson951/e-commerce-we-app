@@ -3,8 +3,10 @@
 import { RequireAdmin } from "@/components/route-guards";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
+import { getNextTrackingStatus, getOrderStatusLabel } from "@/lib/order-tracking";
 import { Order } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 function getCustomerLabel(order: Order) {
@@ -24,6 +26,8 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"newest" | "amount-desc" | "amount-asc">("newest");
   const [page, setPage] = useState(1);
+  const [message, setMessage] = useState<string | null>(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -37,10 +41,7 @@ export default function AdminOrdersPage() {
   }, [token]);
 
   const totalRevenue = useMemo(() => orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0), [orders]);
-  const pendingCount = useMemo(
-    () => orders.filter((order) => String(order.status).toUpperCase().includes("PENDING")).length,
-    [orders]
-  );
+  const inProgressCount = useMemo(() => orders.filter((order) => !["DELIVERED", "CANCELLED"].includes(order.status)).length, [orders]);
   const filteredOrders = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     let result = orders.filter((order) => {
@@ -68,6 +69,24 @@ export default function AdminOrdersPage() {
     return ["all", ...all];
   }, [orders]);
 
+  async function advanceStage(order: Order) {
+    if (!token) return;
+    const next = getNextTrackingStatus(order.status);
+    if (!next) return;
+    setError(null);
+    setMessage(null);
+    setUpdatingOrderId(order.id);
+    try {
+      const updated = await api.adminUpdateOrderStatus(token, order.id, next);
+      setOrders((prev) => prev.map((entry) => (entry.id === order.id ? { ...entry, status: updated.status } : entry)));
+      setMessage(`Order ${order.orderNumber} moved to ${getOrderStatusLabel(updated.status)}.`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
   return (
     <RequireAdmin>
       <section className="space-y-6">
@@ -83,13 +102,14 @@ export default function AdminOrdersPage() {
             <p className="mt-1 text-2xl font-bold text-brand-700">{formatCurrency(totalRevenue)}</p>
           </article>
           <article className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">Pending Orders</p>
-            <p className="mt-1 text-2xl font-bold text-amber-600">{pendingCount}</p>
+            <p className="text-sm text-slate-500">In-Progress Orders</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">{inProgressCount}</p>
           </article>
         </div>
 
         {loading ? <p className="rounded-xl bg-white p-4 text-sm text-slate-600">Loading orders...</p> : null}
         {error ? <p className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</p> : null}
+        {message ? <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{message}</p> : null}
         {!loading && !error && !orders.length ? <p className="rounded-xl bg-white p-4 text-sm">No orders found.</p> : null}
         {!loading && !error ? (
           <div className="grid gap-2 sm:grid-cols-3">
@@ -137,7 +157,7 @@ export default function AdminOrdersPage() {
                   <p className="text-sm text-slate-500">{formatDate(order.createdAt)}</p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase text-slate-700">
-                  {order.status}
+                  {getOrderStatusLabel(order.status)}
                 </span>
               </div>
 
@@ -155,6 +175,23 @@ export default function AdminOrdersPage() {
                   <p className="text-xs uppercase tracking-wide text-slate-500">Total</p>
                   <p className="text-sm font-semibold text-brand-700">{formatCurrency(order.totalAmount)}</p>
                 </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Link href={`/orders/${order.id}`} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+                  Tracking details
+                </Link>
+                {getNextTrackingStatus(order.status) ? (
+                  <button
+                    type="button"
+                    onClick={() => advanceStage(order)}
+                    disabled={updatingOrderId === order.id}
+                    className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  >
+                    {updatingOrderId === order.id
+                      ? "Updating..."
+                      : `Move to ${getOrderStatusLabel(getNextTrackingStatus(order.status) || order.status)}`}
+                  </button>
+                ) : null}
               </div>
             </article>
           ))}

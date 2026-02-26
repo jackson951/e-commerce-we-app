@@ -6,6 +6,8 @@ import {
   Category,
   CustomerProfile,
   Order,
+  OrderStatus,
+  OrderTracking,
   PaymentMethod,
   PaymentTransaction,
   Product
@@ -173,6 +175,13 @@ export const api = {
     invalidateGetCache(["/categories", "/products"]);
   },
   adminListOrders: (token: string) => request<Order[]>("/admin/orders", "GET", token),
+  adminGetOrderTracking: (token: string, orderId: string) =>
+    request<OrderTracking>(`/admin/orders/${orderId}/tracking`, "GET", token),
+  adminUpdateOrderStatus: async (token: string, orderId: string, status: OrderStatus) => {
+    const updated = await request<Order>(`/admin/orders/${orderId}/status`, "PATCH", token, { status });
+    invalidateGetCache(["/admin/orders", `/orders/${orderId}`, `/orders/${orderId}/tracking`, `/admin/orders/${orderId}/tracking`]);
+    return updated;
+  },
   adminListUsers: (token: string) => request<AdminUser[]>("/admin/users", "GET", token),
   adminSetUserAccess: async (token: string, userId: string, enabled: boolean) => {
     const updated = await request<AdminUser>(`/admin/users/${userId}/access?enabled=${enabled}`, "PATCH", token);
@@ -208,6 +217,7 @@ export const api = {
   },
   listOrders: (token: string, customerId: string) => request<Order[]>(`/customers/${customerId}/orders`, "GET", token),
   getOrder: (token: string, orderId: string) => request<Order>(`/orders/${orderId}`, "GET", token),
+  getOrderTracking: (token: string, orderId: string) => request<OrderTracking>(`/orders/${orderId}/tracking`, "GET", token),
 
   listPaymentMethods: (token: string, customerId: string) =>
     request<PaymentMethod[]>(`/customers/${customerId}/payment-methods`, "GET", token),
@@ -252,7 +262,7 @@ export const api = {
       paymentMethodId,
       cvv
     });
-    invalidateGetCache([`/orders/${orderId}/payments`, `/orders/${orderId}`, "/admin/orders"]);
+    invalidateGetCache([`/orders/${orderId}/payments`, `/orders/${orderId}`, `/orders/${orderId}/tracking`, "/admin/orders"]);
     return payment;
   },
   listOrderPayments: (token: string, orderId: string) =>

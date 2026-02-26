@@ -4,6 +4,7 @@ import { PaymentMethodForm } from "@/components/payment-method-form";
 import { RequireAuth } from "@/components/route-guards";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
+import { getOrderStatusLabel } from "@/lib/order-tracking";
 import { Order, PaymentMethod, PaymentTransaction } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CheckCircle2, CreditCard, ShieldCheck } from "lucide-react";
@@ -65,7 +66,8 @@ export function CheckoutPaymentClient() {
     }
   }, [defaultMethod, selectedMethodId]);
 
-  const isPaid = order?.status === "PAID";
+  const hasApprovedPayment = payments.some((payment) => payment.status === "APPROVED");
+  const canPayOrder = order?.status === "ORDER_RECEIVED" && !hasApprovedPayment;
   const cvvValid = /^\d{3,4}$/.test(cvv.trim());
 
   return (
@@ -105,11 +107,11 @@ export function CheckoutPaymentClient() {
                 <p className="text-xs text-slate-500">{formatDate(order.createdAt)}</p>
                 <p
                   className={`mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    order.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    order.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {order.status === "PAID" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                  {order.status}
+                  {order.status === "DELIVERED" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                  {getOrderStatusLabel(order.status)}
                 </p>
               </div>
               <ul className="space-y-2 text-sm">
@@ -149,7 +151,7 @@ export function CheckoutPaymentClient() {
                   >
                     <div>
                       <p className="text-sm font-medium">
-                        {method.brand} •••• {method.last4} {method.defaultMethod ? "(Default)" : ""}
+                        {method.brand} **** {method.last4} {method.defaultMethod ? "(Default)" : ""}
                       </p>
                       <p className="text-xs text-slate-500">
                         exp {String(method.expiryMonth).padStart(2, "0")}/{method.expiryYear}
@@ -160,7 +162,7 @@ export function CheckoutPaymentClient() {
                       name="payment-method"
                       checked={selectedMethodId === method.id}
                       onChange={() => setSelectedMethodId(method.id)}
-                      disabled={!method.enabled || isPaid}
+                      disabled={!method.enabled || !canPayOrder}
                     />
                   </label>
                 ))}
@@ -173,12 +175,12 @@ export function CheckoutPaymentClient() {
                   onChange={(e) => setCvv(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none ring-brand-500 focus:ring"
                   placeholder="123"
-                  disabled={isPaid}
+                  disabled={!canPayOrder}
                 />
               </label>
 
               <button
-                disabled={processing || isPaid || !selectedMethodId || !cvvValid}
+                disabled={processing || !canPayOrder || !selectedMethodId || !cvvValid}
                 className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                 onClick={async () => {
                   if (!token || !selectedMethodId) {
@@ -197,7 +199,7 @@ export function CheckoutPaymentClient() {
                     setPayments(await api.listOrderPayments(token, order.id));
                     setOrder(await api.getOrder(token, order.id));
                     if (result.status === "APPROVED") {
-                      setMessage("Payment approved. Your order is now paid.");
+                      setMessage("Payment approved. Admin can now progress delivery tracking stages.");
                     } else {
                       setError(result.gatewayMessage || "Payment declined.");
                     }
@@ -208,13 +210,14 @@ export function CheckoutPaymentClient() {
                   }
                 }}
               >
-                {processing ? "Processing..." : isPaid ? "Order already paid" : `Pay ${formatCurrency(order.totalAmount)}`}
+                {processing ? "Processing..." : !canPayOrder ? "Payment unavailable for this stage" : `Pay ${formatCurrency(order.totalAmount)}`}
               </button>
-              {!isPaid && !cvvValid ? <p className="text-xs text-amber-700">Enter a valid CVV to enable payment.</p> : null}
+              {canPayOrder && !cvvValid ? <p className="text-xs text-amber-700">Enter a valid CVV to enable payment.</p> : null}
+              {!canPayOrder ? <p className="text-xs text-slate-600">Payment is only allowed at Order Received stage.</p> : null}
 
               <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
                 <p className="font-medium text-slate-800">Payment flow notes</p>
-                <p className="mt-1">Approved payment sets order status to PAID. Declined attempts are logged with reason and can be retried.</p>
+                <p className="mt-1">Approved payment no longer changes tracking status. Tracking advances stage-by-stage via admin updates.</p>
               </div>
 
               <details className="rounded-xl border border-slate-200 p-3">
@@ -235,7 +238,7 @@ export function CheckoutPaymentClient() {
                 </div>
               </details>
 
-              {!isPaid ? (
+              {canPayOrder ? (
                 <details className="rounded-xl border border-slate-200 p-3">
                   <summary className="cursor-pointer text-sm font-medium">Add a new card</summary>
                   <div className="mt-3">

@@ -3,6 +3,7 @@
 import { RequireAuth } from "@/components/route-guards";
 import { useAuth } from "@/contexts/auth-context";
 import { api } from "@/lib/api";
+import { getOrderStatusLabel } from "@/lib/order-tracking";
 import { Order } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CheckCircle2, Clock3 } from "lucide-react";
@@ -65,11 +66,11 @@ export default function OrdersPage() {
                 <p className="font-semibold text-slate-900">{order.orderNumber}</p>
                 <p
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                    order.status === "PAID" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    order.status === "DELIVERED" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {order.status === "PAID" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
-                  {order.status}
+                  {order.status === "DELIVERED" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
+                  {getOrderStatusLabel(order.status)}
                 </p>
               </div>
               <p className="mt-1 text-sm text-slate-500">{formatDate(order.createdAt)}</p>
@@ -89,12 +90,12 @@ export default function OrdersPage() {
                 >
                   View order details
                 </Link>
-                {!isAdmin && order.status !== "PAID" ? (
+                {!isAdmin && order.status === "ORDER_RECEIVED" ? (
                   <Link
                     href={`/checkout/payment?orderId=${order.id}`}
                     className="inline-flex rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
                   >
-                    Complete payment
+                    Pay for order
                   </Link>
                 ) : null}
               </div>
