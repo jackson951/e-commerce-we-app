@@ -164,8 +164,9 @@ export function Navbar() {
         </button>
       </div>
 
-        <div className={`${menuOpen ? "max-h-[80vh] border-t border-slate-200 py-3" : "max-h-0"} overflow-hidden transition-all md:hidden`}>
-        <div className="mx-auto grid max-w-7xl gap-2 px-4">
+      {/* ✅ Outer div handles open/close animation, inner div handles scrolling */}
+      <div className={`${menuOpen ? "max-h-[80vh] border-t border-slate-200 py-3" : "max-h-0"} overflow-hidden transition-all duration-300 md:hidden`}>
+        <div className="mx-auto grid max-w-7xl gap-2 px-4 overflow-y-auto max-h-[75vh]">
           {resolvedHasAdminRole ? (
             <button
               onClick={toggleViewMode}
@@ -177,7 +178,7 @@ export function Navbar() {
           <div className="rounded-lg border border-slate-200">
             <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Categories</p>
             <div className="grid gap-1 px-2 pb-2">
-              {categories.slice(0, 8).map((category) => (
+              {categories.map((category) => (
                 <Link
                   key={category.id}
                   href={`/categories/${category.id}`}
