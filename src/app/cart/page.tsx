@@ -3,7 +3,17 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useCart } from "@/contexts/cart-context";
 import { formatCurrency } from "@/lib/utils";
-import { AlertCircle, CircleCheckBig, LockKeyhole, ShoppingBag, Truck } from "lucide-react";
+import {
+  Lock,
+  Minus,
+  Package,
+  Plus,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingBasket,
+  Trash2,
+  Truck,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -16,193 +26,283 @@ export default function CartPage() {
   const { cart, isGuestCart, loading, mutating, updateItem, removeItem, checkout } = useCart();
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
-  const canCheckout = Boolean(user && canUseCustomerFeatures && !isGuestCart);
+  const [checkingOut, setCheckingOut] = useState(false);
 
+  const canCheckout = Boolean(user && canUseCustomerFeatures && !isGuestCart);
   const subtotal = cart?.totalAmount || 0;
   const shipping = subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD ? STANDARD_SHIPPING : 0;
   const total = subtotal + shipping;
+  const freeShippingRemaining = FREE_SHIPPING_THRESHOLD - subtotal;
+  const freeShippingProgress = Math.min((subtotal / FREE_SHIPPING_THRESHOLD) * 100, 100);
 
-  const itemCount = useMemo(() => cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0, [cart?.items]);
+  const itemCount = useMemo(
+    () => cart?.items.reduce((sum, item) => sum + item.quantity, 0) || 0,
+    [cart?.items]
+  );
+
+  async function handleQty(id: string, qty: number) {
+    setError(null);
+    setUpdatingItemId(id);
+    try {
+      await updateItem(id, qty);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUpdatingItemId(null);
+    }
+  }
+
+  async function handleRemove(id: string) {
+    setError(null);
+    setUpdatingItemId(id);
+    try {
+      await removeItem(id);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUpdatingItemId(null);
+    }
+  }
+
+  async function handleCheckout() {
+    setError(null);
+    setMessage(null);
+    setCheckingOut(true);
+    try {
+      const { sessionId } = await checkout();
+      setMessage("Taking you to payment…");
+      router.push(`/checkout/payment?sessionId=${sessionId}`);
+    } catch (err) {
+      setError((err as Error).message);
+      setCheckingOut(false);
+    }
+  }
 
   return (
-    <section className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-slate-900 to-brand-700 text-white">
-        <div className="grid gap-4 p-6 sm:p-8 lg:grid-cols-[1.2fr_1fr]">
-          <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-amber-300">Checkout flow</p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">Review your cart before secure payment</h1>
-            <p className="mt-2 text-sm text-slate-200 sm:text-base">Adjust item quantities, verify totals, and continue to payment session checkout.</p>
-          </div>
-          <div className="grid gap-2 rounded-2xl border border-white/15 bg-slate-950/40 p-4 text-sm">
-            <p className="font-semibold text-white">Flow status</p>
-            <p className="inline-flex items-center gap-2 text-slate-100"><CircleCheckBig className="h-4 w-4 text-emerald-400" /> Cart review</p>
-            <p className="inline-flex items-center gap-2 text-slate-100"><LockKeyhole className="h-4 w-4 text-amber-300" /> Payment authorization</p>
-            <p className="inline-flex items-center gap-2 text-slate-100"><Truck className="h-4 w-4 text-brand-200" /> Order fulfillment</p>
-          </div>
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+
+      {/* Page header */}
+      <div className="mb-8 flex items-center gap-3">
+        <Link href="/" className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-500 shadow-lg shadow-rose-500/25">
+          <ShoppingBasket className="h-4 w-4 text-white" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Your Cart</h1>
+          {itemCount > 0 && (
+            <p className="text-sm text-slate-500">{itemCount} {itemCount === 1 ? "item" : "items"} ready to order</p>
+          )}
         </div>
       </div>
 
-      {!user ? (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          You are shopping as guest. You can add and edit items now, then login to checkout.
-        </p>
-      ) : null}
-      {user && !canUseCustomerFeatures ? (
-        <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">
+      {/* Auth notices */}
+      {!user && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          You're browsing as a guest. <Link href="/login" className="font-semibold underline">Sign in</Link> to complete your purchase.
+        </div>
+      )}
+      {user && !canUseCustomerFeatures && (
+        <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
           {hasAdminRole && viewMode === "ADMIN"
-            ? "Switch to Customer View from the header to use cart and checkout."
-            : "Only customer accounts can use the cart and checkout flow."}
-        </p>
-      ) : null}
+            ? "Switch to Customer View to use your cart."
+            : "Only customer accounts can checkout."}
+        </div>
+      )}
 
-      {loading && <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">Loading cart...</p>}
-      {!cart?.items.length && !loading ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-          <ShoppingBag className="mx-auto h-8 w-8 text-slate-400" />
-          <p className="mt-3 font-semibold text-slate-900">Your cart is empty</p>
-          <p className="mt-1 text-sm text-slate-600">Browse the catalog and add products to start checkout.</p>
-          <Link href="/" className="mt-4 inline-flex rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-            Continue shopping
+      {/* Errors / success */}
+      {error && (
+        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+      {message && (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <ShieldCheck className="h-4 w-4 shrink-0" /> {message}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-rose-400 border-t-transparent" />
+          Loading your cart…
+        </div>
+      )}
+
+      {/* Empty cart */}
+      {!loading && !cart?.items.length && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+            <ShoppingBag className="h-8 w-8 text-slate-400" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Your cart is empty</h2>
+          <p className="mt-1 text-sm text-slate-500">Looks like you haven't added anything yet.</p>
+          <Link
+            href="/products"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-rose-500 px-6 py-3 text-sm font-bold text-white shadow-md shadow-rose-500/20 hover:bg-rose-600 transition-colors"
+          >
+            Start Shopping
           </Link>
         </div>
-      ) : null}
+      )}
 
+      {/* Cart content */}
       {cart?.items.length ? (
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-          <article className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-            <h2 className="text-xl font-semibold text-slate-900">Items in your cart ({itemCount})</h2>
-            <div className="space-y-3">
-              {cart.items.map((item) => (
-                <div key={item.id} className="grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-[1fr_auto] sm:items-center">
-                  <div>
-                    <p className="font-medium text-slate-900">{item.productName}</p>
-                    <p className="text-sm text-slate-500">Unit price: {formatCurrency(item.unitPrice)}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <button
-                      className="rounded-md border border-slate-300 px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={mutating || item.quantity <= 1}
-                      onClick={async () => {
-                        setMessage(null);
-                        setUpdatingItemId(item.id);
-                        try {
-                          await updateItem(item.id, item.quantity - 1);
-                        } catch (err) {
-                          setMessage((err as Error).message);
-                        } finally {
-                          setUpdatingItemId(null);
-                        }
-                      }}
+        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+
+          {/* ── Items ── */}
+          <div className="space-y-3">
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="border-b border-slate-100 px-5 py-4 flex items-center gap-2">
+                <Package className="h-4 w-4 text-rose-500" />
+                <h2 className="font-bold text-slate-900">Items ({itemCount})</h2>
+              </div>
+
+              <ul className="divide-y divide-slate-100">
+                {cart.items.map((item) => {
+                  const isUpdating = updatingItemId === item.id;
+                  return (
+                    <li
+                      key={item.id}
+                      className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center transition-opacity ${isUpdating ? "opacity-50" : ""}`}
                     >
-                      -
-                    </button>
-                    <span className="w-8 text-center text-sm font-semibold text-slate-800">{item.quantity}</span>
-                    <button
-                      className="rounded-md border border-slate-300 px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={mutating}
-                      onClick={async () => {
-                        setMessage(null);
-                        setUpdatingItemId(item.id);
-                        try {
-                          await updateItem(item.id, item.quantity + 1);
-                        } catch (err) {
-                          setMessage((err as Error).message);
-                        } finally {
-                          setUpdatingItemId(null);
-                        }
-                      }}
-                    >
-                      +
-                    </button>
-                    <p className="w-28 text-right font-semibold text-slate-900">{formatCurrency(item.subtotal)}</p>
-                    <button
-                      className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-sm text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                      disabled={mutating}
-                      onClick={async () => {
-                        setMessage(null);
-                        setUpdatingItemId(item.id);
-                        try {
-                          await removeItem(item.id);
-                        } catch (err) {
-                          setMessage((err as Error).message);
-                        } finally {
-                          setUpdatingItemId(null);
-                        }
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  {updatingItemId === item.id ? <p className="text-xs text-slate-500 sm:col-span-2">Updating item...</p> : null}
+                      {/* Product info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-900 truncate">{item.productName}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{formatCurrency(item.unitPrice)} each</p>
+                      </div>
+
+                      {/* Quantity controls */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50">
+                          <button
+                            onClick={() => handleQty(item.id, item.quantity - 1)}
+                            disabled={mutating || item.quantity <= 1}
+                            className="flex h-9 w-9 items-center justify-center rounded-l-xl text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                          >
+                            <Minus className="h-3.5 w-3.5" />
+                          </button>
+                          <span className="w-8 text-center text-sm font-bold text-slate-900">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => handleQty(item.id, item.quantity + 1)}
+                            disabled={mutating}
+                            className="flex h-9 w-9 items-center justify-center rounded-r-xl text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <span className="w-24 text-right text-sm font-bold text-slate-900">
+                          {formatCurrency(item.subtotal)}
+                        </span>
+
+                        <button
+                          onClick={() => handleRemove(item.id)}
+                          disabled={mutating}
+                          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-400 hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40 transition-all"
+                          aria-label="Remove item"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <Link
+              href="/products"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-rose-500 hover:text-rose-600 transition-colors"
+            >
+              ← Continue shopping
+            </Link>
+          </div>
+
+          {/* ── Order summary ── */}
+          <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 font-bold text-slate-900">Order summary</h2>
+
+              {/* Free shipping progress */}
+              <div className="mb-5 rounded-xl bg-slate-50 p-3">
+                <div className="flex items-center justify-between text-xs font-medium text-slate-600 mb-2">
+                  <span className="flex items-center gap-1">
+                    <Truck className="h-3.5 w-3.5 text-emerald-500" />
+                    {shipping === 0 ? "You've got free shipping! 🎉" : `Add ${formatCurrency(freeShippingRemaining)} for free shipping`}
+                  </span>
                 </div>
-              ))}
-            </div>
-          </article>
-
-          <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 xl:sticky xl:top-24">
-            <h2 className="text-xl font-semibold text-slate-900">Order summary</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-700">
-              <div className="flex items-center justify-between">
-                <span>Subtotal</span>
-                <span>{formatCurrency(subtotal)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Shipping</span>
-                <span>{shipping ? formatCurrency(shipping) : "Free"}</span>
-              </div>
-              <div className="border-t border-slate-200 pt-2 text-base font-semibold text-slate-900">
-                <div className="flex items-center justify-between">
-                  <span>Total</span>
-                  <span>{formatCurrency(total)}</span>
+                <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${freeShippingProgress}%` }}
+                  />
                 </div>
               </div>
-            </div>
 
-            <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-              {shipping ? (
-                <>Add {formatCurrency(FREE_SHIPPING_THRESHOLD - subtotal)} more to unlock free shipping.</>
-              ) : (
-                <>You qualify for free shipping.</>
-              )}
-            </div>
+              {/* Price breakdown */}
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <span>Subtotal</span>
+                  <span className="font-medium text-slate-900">{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Shipping</span>
+                  <span className={`font-medium ${shipping === 0 ? "text-emerald-600" : "text-slate-900"}`}>
+                    {shipping === 0 ? "Free" : formatCurrency(shipping)}
+                  </span>
+                </div>
+                <div className="border-t border-slate-100 pt-3 flex justify-between">
+                  <span className="font-bold text-slate-900">Total</span>
+                  <span className="text-xl font-extrabold text-slate-900">{formatCurrency(total)}</span>
+                </div>
+              </div>
 
-            {canCheckout ? (
-              <button
-                onClick={async () => {
-                  try {
-                    setMessage(null);
-                    const { sessionId } = await checkout();
-                    setMessage("Checkout session created. Redirecting to payment...");
-                    router.push(`/checkout/payment?sessionId=${sessionId}`);
-                  } catch (err) {
-                    setMessage((err as Error).message);
-                  }
-                }}
-                disabled={mutating}
-                className="mt-4 w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                {mutating ? "Starting checkout..." : "Proceed to secure checkout"}
-              </button>
-            ) : (
-              <Link href="/login" className="mt-4 inline-flex w-full justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-                Login to checkout
-              </Link>
-            )}
+              {/* CTA */}
+              <div className="mt-5 space-y-3">
+                {canCheckout ? (
+                  <button
+                    onClick={handleCheckout}
+                    disabled={mutating || checkingOut}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                  >
+                    {checkingOut ? (
+                      <>
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Starting checkout…
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4" />
+                        Checkout securely
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 hover:bg-rose-600 transition-colors"
+                  >
+                    Sign in to checkout
+                  </Link>
+                )}
 
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-              <p className="inline-flex items-center gap-1 font-medium text-slate-800"><AlertCircle className="h-4 w-4" /> Checkout note</p>
-              <p className="mt-1">Checkout creates a payment session, then finalizes the order only after payment approval.</p>
+                {/* Trust signals */}
+                <div className="flex items-center justify-center gap-4 text-xs text-slate-400">
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Secure payment
+                  </span>
+                  <span>·</span>
+                  <span className="flex items-center gap-1">
+                    <Lock className="h-3.5 w-3.5 text-emerald-500" /> Encrypted
+                  </span>
+                </div>
+              </div>
             </div>
           </aside>
         </div>
       ) : null}
-
-      {message ? (
-        <p className={`rounded-xl p-3 text-sm ${message.includes("Redirecting") ? "border border-emerald-200 bg-emerald-50 text-emerald-700" : "border border-slate-200 bg-white text-slate-700"}`}>
-          {message}
-        </p>
-      ) : null}
-    </section>
+    </div>
   );
 }
