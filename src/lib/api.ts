@@ -213,6 +213,11 @@ export const api = {
     invalidateGetCache([`/customers/${customerId}/cart`]);
     return cart;
   },
+  clearCart: async (token: string, customerId: string) => {
+    const cart = await request<Cart>(`/customers/${customerId}/cart`, "DELETE", token);
+    invalidateGetCache([`/customers/${customerId}/cart`]);
+    return cart;
+  },
   checkout: async (token: string, customerId: string) => {
     const session = await request<CheckoutSession>(`/customers/${customerId}/orders/checkout`, "POST", token);
     invalidateGetCache([`/customers/${customerId}/cart`, `/customers/${customerId}/orders`, "/admin/orders"]);

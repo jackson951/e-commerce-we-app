@@ -15,6 +15,7 @@ type CartContextValue = {
   addItem: (productId: string, quantity: number) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
+  clearCart: () => Promise<void>;
   checkout: () => Promise<{ sessionId: string }>;
 };
 
@@ -238,6 +239,30 @@ const refreshCart = useCallback(async () => {
     }
   };
 
+  const clearCart = async () => {
+    if (isGuestCart) {
+      setMutating(true);
+      try {
+        localStorage.removeItem(GUEST_CART_STORAGE_KEY);
+        await refreshCart();
+      } finally {
+        setMutating(false);
+      }
+      return;
+    }
+    if (!token || !effectiveCustomerId) throw new Error("Login to use cart.");
+    setMutating(true);
+    try {
+      const nextCart = await api.clearCart(token, effectiveCustomerId);
+      await syncCartFromMutation(nextCart);
+    } catch (err) {
+      setOptimisticQuantityDelta(0);
+      throw err;
+    } finally {
+      setMutating(false);
+    }
+  };
+
   const checkout = async () => {
     if (isGuestCart) throw new Error("Login to checkout. Your guest cart will be merged automatically.");
     if (!token || !effectiveCustomerId) throw new Error("Login to checkout.");
@@ -256,7 +281,7 @@ const refreshCart = useCallback(async () => {
   };
 
   const cartQuantity = (cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0) + optimisticQuantityDelta;
-  const value = { cart, cartQuantity, isGuestCart, loading, mutating, refreshCart, addItem, updateItem, removeItem, checkout };
+  const value = { cart, cartQuantity, isGuestCart, loading, mutating, refreshCart, addItem, updateItem, removeItem, clearCart, checkout };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -77,7 +77,7 @@ export function CheckoutPaymentClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { token, effectiveCustomerId, canUseCustomerFeatures, hasAdminRole, viewMode } = useAuth();
-  const { refreshCart } = useCart();
+  const { refreshCart, clearCart } = useCart();
 
   const sessionId = searchParams.get("sessionId") || "";
   const hasValidSessionId = /^[0-9a-fA-F-]{36}$/.test(sessionId);
@@ -153,6 +153,8 @@ export function CheckoutPaymentClient() {
       if (result.status === "APPROVED") {
         refreshCart();
         const finalized = await api.finalizeCheckoutSession(token, session!.checkoutSessionId, idempotencyKey);
+        // Clear the cart after successful payment
+        await clearCart();
         setMessage("Payment successful! Taking you to your order…");
         router.push(`/orders/${finalized.orderId}`);
       } else {
