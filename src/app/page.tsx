@@ -7,6 +7,7 @@ import { ArrowRight, Heart, ShieldCheck, Star, Truck, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { formatCurrency } from "@/lib/utils";
 
 const CATEGORY_IMAGES: Record<string, string> = {
   electronics:    "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=800&q=80",
@@ -128,7 +129,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
           <span className="ml-1 text-xs text-slate-400">(4.8)</span>
         </div>
         <div className="flex items-center justify-between pt-1">
-          <span className="text-base font-extrabold text-slate-900">R{product.price.toLocaleString()}</span>
+          <span className="text-base font-extrabold text-slate-900">{formatCurrency(product.price)}</span>
           {inStock ? <span className="text-xs font-medium text-emerald-600">✓ In stock</span> : <span className="text-xs font-medium text-slate-400">Out of stock</span>}
         </div>
         <Link href={`/products/${product.id}`} className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white hover:bg-rose-600 transition-colors duration-200">
