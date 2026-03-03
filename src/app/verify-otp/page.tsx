@@ -313,7 +313,8 @@ export default function VerifyOtpPage() {
         {/* Main Card */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm sm:shadow-md relative">
           <form onSubmit={handlePasswordReset} className="space-y-4" noValidate>
-            <Field label="New password" error={error}>
+            {/* ✅ FIX: Convert null to undefined with ?? undefined */}
+            <Field label="New password" error={error ?? undefined}>
               <div className="relative">
                 <input
                   className={`${inputClass} pr-11`}
@@ -338,7 +339,8 @@ export default function VerifyOtpPage() {
               </div>
             </Field>
 
-            <Field label="Confirm new password" error={error}>
+            {/* ✅ FIX: Convert null to undefined with ?? undefined */}
+            <Field label="Confirm new password" error={error ?? undefined}>
               <div className="relative">
                 <input
                   className={`${inputClass} pr-11`}
@@ -484,7 +486,7 @@ export default function VerifyOtpPage() {
           onChange={setOtp}
           onComplete={handleOtpComplete}
           disabled={otpLoading}
-          error={otpError || undefined}
+          error={otpError ?? undefined}
         />
 
         {/* Action Buttons */}
