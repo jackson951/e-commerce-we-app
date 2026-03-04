@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { TermsModal } from "@/components/terms-modal";
 
 function statusBadge(status?: string) {
   switch (status) {
@@ -94,6 +95,9 @@ export function CheckoutPaymentClient() {
   const [error, setError]                   = useState<string | null>(null);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
 
+  // Terms modal state
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
   const defaultMethod = useMemo(
     () =>
       paymentMethods.find((m) => m.defaultMethod && m.enabled) ||
@@ -140,19 +144,28 @@ export function CheckoutPaymentClient() {
   const cvvValid = /^\d{3,4}$/.test(cvv.trim());
   const badge = statusBadge(session?.status);
 
-  async function handlePay() {
+  // Validate payment details and show terms modal
+  function handlePay() {
     if (!token || !selectedMethodId) { setError("Please choose a payment method."); return; }
     if (!cvvValid) { setError("Please enter a valid CVV (3 or 4 digits)."); return; }
+    
+    // Show terms modal instead of immediately processing payment
+    setShowTermsModal(true);
+  }
+
+  // Handle terms acceptance and proceed with payment
+  async function handleTermsAccepted() {
+    setShowTermsModal(false);
     setProcessing(true);
     setError(null);
     setMessage(null);
     try {
       const result = await api.payCheckoutSession(
-        token, session!.checkoutSessionId, selectedMethodId, cvv, idempotencyKey
+        token, session!.checkoutSessionId!, selectedMethodId, cvv, idempotencyKey
       );
       if (result.status === "APPROVED") {
         refreshCart();
-        const finalized = await api.finalizeCheckoutSession(token, session!.checkoutSessionId, idempotencyKey);
+        const finalized = await api.finalizeCheckoutSession(token, session!.checkoutSessionId!, idempotencyKey);
         // Clear the cart after successful payment
         await clearCart();
         setMessage("Payment successful! Taking you to your order…");
@@ -160,7 +173,7 @@ export function CheckoutPaymentClient() {
       } else {
         setError(result.gatewayMessage || "Your payment was declined. Please try a different card.");
       }
-      setSession(await api.getCheckoutSession(token, session!.checkoutSessionId));
+      setSession(await api.getCheckoutSession(token, session!.checkoutSessionId!));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -432,10 +445,34 @@ export function CheckoutPaymentClient() {
                   My orders
                 </Link>
               </div>
+
+              {/* Terms link */}
+              <p className="mt-4 text-center text-xs text-slate-400">
+                By completing this purchase you agree to our{" "}
+                <button 
+                  type="button"
+                  onClick={() => setShowTermsModal(true)}
+                  className="underline hover:text-slate-600 cursor-pointer"
+                >
+                  Terms
+                </button>{" "}
+                and{" "}
+                <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
+              </p>
             </div>
           </div>
         )}
       </div>
+
+      {/* Terms Modal */}
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={handleTermsAccepted}
+        title="Terms and Conditions"
+        description="Please read and accept our terms and conditions to complete your purchase."
+        buttonText="I Accept"
+      />
     </RequireAuth>
   );
 }

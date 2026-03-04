@@ -6,6 +6,7 @@ import { ArrowRight, Eye, EyeOff, ShoppingBasket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { TermsModal } from "@/components/terms-modal";
 
 const inputClass =
   "w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-rose-400 focus:bg-white focus:ring-2 focus:ring-rose-100";
@@ -32,6 +33,7 @@ export default function LoginPage() {
   const [error, setError]       = useState<string | null>(null);
   const [loading, setLoading]   = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -165,10 +167,26 @@ export default function LoginPage() {
 
       <p className="mt-6 text-center text-xs text-slate-400">
         By signing in you agree to our{" "}
-        <Link href="/terms" className="underline hover:text-slate-600">Terms</Link>{" "}
+        <button 
+          type="button"
+          onClick={() => setShowTermsModal(true)}
+          className="underline hover:text-slate-600 cursor-pointer"
+        >
+          Terms
+        </button>{" "}
         and{" "}
         <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
       </p>
+
+      {/* Terms Modal */}
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={() => setShowTermsModal(false)}
+        title="Terms and Conditions"
+        description="Please read and accept our terms and conditions."
+        buttonText="I Accept"
+      />
     </div>
   );
 }

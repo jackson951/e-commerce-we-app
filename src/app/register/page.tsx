@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, useEffect, useRef } from "react";
 import { api } from "@/lib/api";
+import { TermsModal } from "@/components/terms-modal";
 
 // Reusable Field component
 function Field({
@@ -146,6 +147,9 @@ export default function RegisterPage() {
   // Registration error state
   const [registrationError, setRegistrationError] = useState<string | null>(null);
 
+  // Terms modal state
+  const [showTermsModal, setShowTermsModal] = useState(false);
+
   // Form field handlers
   function update(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,13 +190,26 @@ export default function RegisterPage() {
       return;
     }
 
+    // Show terms modal instead of immediately submitting
+    setShowTermsModal(true);
+  }
+
+  // Handle terms acceptance and proceed with registration
+  async function handleTermsAccepted() {
+    setShowTermsModal(false);
     setSubmitLoading(true);
     
     try {
       // Call real OTP endpoint for registration
       await api.forgotPassword(form.email);
       
-      setRegistrationData(parsed.data);
+      setRegistrationData({
+        fullName: form.fullName,
+        email: form.email.trim(),
+        password: form.password,
+        phone: form.phone.trim() || undefined,
+        address: form.address.trim() || undefined,
+      });
       
       // Redirect to OTP verification page
       router.push(`/verify-otp?flow=registration&email=${encodeURIComponent(form.email)}`);
@@ -616,7 +633,13 @@ export default function RegisterPage() {
 
           <p className="mt-6 text-center text-xs text-slate-400">
             By creating an account you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-slate-600">Terms</Link>{" "}
+            <button 
+              type="button"
+              onClick={() => setShowTermsModal(true)}
+              className="underline hover:text-slate-600 cursor-pointer"
+            >
+              Terms
+            </button>{" "}
             and{" "}
             <Link href="/privacy" className="underline hover:text-slate-600">Privacy Policy</Link>.
           </p>
@@ -632,6 +655,16 @@ export default function RegisterPage() {
           </p>
         </div>
       )}
+
+      {/* Terms Modal */}
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        onAccept={handleTermsAccepted}
+        title="Terms and Conditions"
+        description="Please read and accept our terms and conditions to continue with registration."
+        buttonText="I Accept"
+      />
     </div>
   );
 }
