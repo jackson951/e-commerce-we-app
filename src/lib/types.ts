@@ -158,11 +158,13 @@ export type CheckoutSession = {
   checkoutSessionId: string;
   customerId?: string;
   status: CheckoutSessionStatus;
- amount: number;
+  amount: number;
   currency?: string;
   createdAt?: string;
   expiresAt?: string;
   items: CheckoutSessionItem[];
+  isDelivery?: boolean;
+  shippingAddress?: string;
 };
 
 export type CheckoutSessionPayResponse = {

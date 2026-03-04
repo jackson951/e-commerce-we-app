@@ -18,6 +18,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { GoogleMapsAutocomplete } from "@/components/google-maps-autocomplete";
 import { useEffect, useMemo, useState } from "react";
 
 const STANDARD_SHIPPING = 79;
@@ -67,6 +68,7 @@ export default function CartPage() {
   // Delivery options state
   const [deliveryOption, setDeliveryOption] = useState<'collection' | 'delivery'>('collection');
   const [shippingAddress, setShippingAddress] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   
   // Calculate shipping based on delivery option
   const shipping = deliveryOption === 'delivery' 
@@ -361,15 +363,13 @@ export default function CartPage() {
                 {/* Shipping Address (only for delivery) */}
                 {deliveryOption === 'delivery' && (
                   <div className="mt-3">
-                    <label className="block text-xs font-medium text-slate-700 mb-2">
-                      Shipping Address
-                    </label>
-                    <textarea
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                      placeholder="Enter your delivery address..."
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent resize-none"
-                      rows={3}
+                    <GoogleMapsAutocomplete
+                      onAddressSelect={(address, location) => {
+                        setShippingAddress(address);
+                        setSelectedLocation(location);
+                      }}
+                      initialAddress={shippingAddress}
+                      initialLocation={selectedLocation || undefined}
                     />
                   </div>
                 )}

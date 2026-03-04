@@ -15,6 +15,7 @@ import {
   Plus,
   ShieldCheck,
   ShoppingBasket,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -407,7 +408,7 @@ export function CheckoutPaymentClient() {
               </div>
             </div>
 
-            {/* ── RIGHT: Order summary ── */}
+        {/* ── RIGHT: Order summary ── */}
             <div className="space-y-4">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-slate-900">
@@ -422,6 +423,17 @@ export function CheckoutPaymentClient() {
                     : <ShieldCheck className="h-3 w-3" />}
                   {badge.label}
                 </span>
+
+                {/* Delivery Information */}
+                {session.isDelivery && session.shippingAddress && (
+                  <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Truck className="h-4 w-4 text-rose-500" />
+                      <span className="text-sm font-semibold text-slate-900">Delivery Address</span>
+                    </div>
+                    <p className="text-sm text-slate-600">{session.shippingAddress}</p>
+                  </div>
+                )}
 
                 {/* Items */}
                 <ul className="space-y-3">
