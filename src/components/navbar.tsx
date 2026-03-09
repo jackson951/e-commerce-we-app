@@ -78,7 +78,7 @@ export function Navbar() {
 
   const navLinks = useMemo(() => [
     { href: "/products",   label: "All Products" },
-    { href: "/orders",     label: "My Orders"    },
+    { href:isAdmin?"/admin/orders" :"/orders",     label: isAdmin?"Orders":"My Orders"    },
   ], []);
 
   function handleSearchSubmit(e: FormEvent<HTMLFormElement>) {

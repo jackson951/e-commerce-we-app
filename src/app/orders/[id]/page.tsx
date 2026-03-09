@@ -155,12 +155,12 @@ export default function OrderDetailPage() {
             <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Order Details</h1>
             <p className="text-sm text-slate-500">Everything about your order in one place.</p>
           </div>
-          <Link
-            href="/orders"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> My Orders
-          </Link>
+         <Link
+  href={isAdmin ? "/admin/orders" : "/orders"}
+  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+>
+  <ArrowLeft className="h-4 w-4" /> {isAdmin ? "Orders" : "My Orders"}
+</Link>
         </div>
 
         {/* Loading */}
@@ -187,10 +187,10 @@ export default function OrderDetailPage() {
             <h2 className="text-lg font-bold text-slate-900">Order not found</h2>
             <p className="mt-1 text-sm text-slate-500">This order may have been removed or doesn't exist.</p>
             <Link
-              href="/orders"
+               href={isAdmin ? "/admin/orders" : "/orders"}
               className="mt-5 inline-flex items-center gap-2 rounded-xl bg-rose-500 px-6 py-3 text-sm font-bold text-white hover:bg-rose-600 transition-colors"
             >
-              Back to My Orders
+             {isAdmin ? "Orders" : "Back To My Orders"}
             </Link>
           </div>
         )}
