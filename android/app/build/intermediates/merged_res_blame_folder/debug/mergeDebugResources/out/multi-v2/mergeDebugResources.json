@@ -3834,23 +3834,6 @@
                     }
                 },
                 {
-                    "source": "C:\\Users\\Jackson.Khuto\\.gradle\\caches\\8.14.3\\transforms\\ebf9360ba611f1d20f2bddac6f1045ca\\transformed\\lifecycle-runtime-2.6.2\\res\\values\\values.xml",
-                    "from": {
-                        "startLines": "2",
-                        "startColumns": "4",
-                        "startOffsets": "55",
-                        "endColumns": "42",
-                        "endOffsets": "93"
-                    },
-                    "to": {
-                        "startLines": "284",
-                        "startColumns": "4",
-                        "startOffsets": "18477",
-                        "endColumns": "42",
-                        "endOffsets": "18515"
-                    }
-                },
-                {
                     "source": "C:\\Users\\Jackson.Khuto\\.gradle\\caches\\8.14.3\\transforms\\3f2ab0b27a59a3dfe1466c241ece8334\\transformed\\savedstate-1.2.1\\res\\values\\values.xml",
                     "from": {
                         "startLines": "2",
@@ -3899,6 +3882,23 @@
                         "startOffsets": "20995",
                         "endColumns": "82",
                         "endOffsets": "21073"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\Jackson.Khuto\\.gradle\\caches\\8.14.3\\transforms\\d45dbc7c97801e3febb5b7a374da33d6\\transformed\\lifecycle-runtime-2.6.1\\res\\values\\values.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "42",
+                        "endOffsets": "93"
+                    },
+                    "to": {
+                        "startLines": "284",
+                        "startColumns": "4",
+                        "startOffsets": "18477",
+                        "endColumns": "42",
+                        "endOffsets": "18515"
                     }
                 },
                 {
